@@ -27,14 +27,45 @@ class CHARTSTOOLPLUGIN_API SChartAxes : public SCompoundWidget
 {
 public:
 	SLATE_BEGIN_ARGS(SChartAxes)
-		{
-		}
-
+	: _Oringin(EChartOrigin::LeftBottom)
+	,_AxisColor(FLinearColor::White)
+	,_AxisThickness(1.5f)
+	,_XAxisMin(0.f)
+	,_XAxisMax(1.f)
+	,_XAxisTicks(5)
+	,_YAxisMin(0.f)
+	,_YAxisMax(1.f)
+	,_YAxisTicks(5)
+	,_TickFontSize(10)
+	,_ShowGrid(true)
+	{}
+	
+	/*
+	 *坐标轴相关属性：
+	 * 1. 坐标轴位置，（八方向）
+	 * 2. 坐标轴颜色
+	 * 3. 坐标轴粗细
+	 */
 	SLATE_ATTRIBUTE(EChartOrigin, Oringin)
-	SLATE_ATTRIBUTE(FVector2D, OringinPos)
-	SLATE_ATTRIBUTE(FVector2D, Size)
 	SLATE_ATTRIBUTE(FLinearColor, AxisColor)
 	SLATE_ATTRIBUTE(float, AxisThickness)
+
+	/*
+	 *坐标轴范围和刻度：
+	 */
+	SLATE_ATTRIBUTE(float, XAxisMin) // X轴最小值
+	SLATE_ATTRIBUTE(float, XAxisMax) // X轴最大值
+	SLATE_ATTRIBUTE(int32, XAxisTicks) // X轴刻度
+	SLATE_ATTRIBUTE(float, YAxisMin) // Y轴最小值
+	SLATE_ATTRIBUTE(float, YAxisMax) // Y轴最大值
+	SLATE_ATTRIBUTE(int32, YAxisTicks) // Y轴刻度
+
+	/*
+	 *坐标轴效果
+	 */
+	SLATE_ATTRIBUTE(int32, TickFontSize)//字体大小
+	SLATE_ATTRIBUTE(bool, ShowGrid)//背景网格开关
+	
 	SLATE_END_ARGS()
 
 	/** Constructs this widget with InArgs */
@@ -42,18 +73,21 @@ public:
 
 private:
 	TAttribute<EChartOrigin> Oringin;
-	TAttribute<FVector2D> OringinPos;
-	TAttribute<FVector2D> Size;
 	TAttribute<FLinearColor> AxisColor;
 	TAttribute<float> AxisThickness;
 
-protected:
+	TAttribute<float> XAxisMin;
+	TAttribute<float> XAxisMax;
+	TAttribute<int32> XAxisTicks;
+	TAttribute<float> YAxisMin;
+	TAttribute<float> YAxisMax;
+	TAttribute<int32> YAxisTicks;
 
-	void SetOtinginPos(const FVector2D& InOringinPos)
-	{
-		OringinPos = InOringinPos;
-	}
-	FVector2D GetOringinPosition(const FVector2D& Size);
+	TAttribute<int32> TickFontSize;
+	TAttribute<bool> ShowGrid;
+
+protected:
+	FVector2D GetOriginPosition(const FVector2D& Size) const;
 	
 public:
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;

@@ -11,8 +11,18 @@ TSharedRef<SWidget> ULineChartWidget::RebuildWidget()
 	.Data(BIND_UOBJECT_ATTRIBUTE(TArray<FVector2D>, GetData))
 	.LineColor(LinearColor)
 	.LineThinckness(LineThickness);
+
+	
 	
 	TSharedRef<SOverlay> LineChart = SNew(SOverlay)
+
+	+SOverlay::Slot()
+	[
+		SNew(SChartAxes)
+		.Oringin(ChartOrigin)
+		.AxisColor(AxisColor)
+		.AxisThickness(AxisThinkness)
+	]
 	+ SOverlay::Slot()
 	[
 		SlateWidget.ToSharedRef()
