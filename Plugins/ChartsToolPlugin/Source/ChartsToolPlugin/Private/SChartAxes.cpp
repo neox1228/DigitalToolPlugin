@@ -16,6 +16,12 @@ void SChartAxes::Construct(const FArguments& InArgs)
 	XAxisMin = InArgs._XAxisMin;
 	XAxisMax = InArgs._XAxisMax;
 	XAxisTicks = InArgs._XAxisTicks;
+	YAxisMin = InArgs._YAxisMin;
+	YAxisMax = InArgs._YAxisMax;
+	YAxisTicks = InArgs._YAxisTicks;
+
+	TickFontSize = InArgs._TickFontSize;
+	ShowGrid = InArgs._ShowGrid;
 
 	
 }
@@ -38,6 +44,34 @@ FVector2D SChartAxes::GetOriginPosition(const FVector2D& Size) const
 
 	default: return FVector2D(0, Size.Y);
 	}
+}
+
+FVector2D SChartAxes::DataToLocal(const FVector2D& DataPoint, const FGeometry& AllottedGeometry) const
+{
+	// 获取 widget大小
+	FVector2D Size = AllottedGeometry.GetLocalSize();
+	float Width = Size.X;
+	float Height = Size.Y;
+
+	// 获取数据范围（放置除以 0 ）
+	float minX = XAxisMin.Get();
+	float maxX = XAxisMax.Get();
+	float minY = YAxisMin.Get();
+	float maxY = YAxisMax.Get();
+
+	
+}
+
+void SChartAxes::GetXRange(float& OutMin, float& OutMax) const
+{
+	OutMin = XAxisMin.Get();
+	OutMax = XAxisMax.Get();
+}
+
+void SChartAxes::GetYRange(float& OutMin, float& OutMax) const
+{
+	OutMin = YAxisMin.Get();
+	OutMax = YAxisMax.Get();
 }
 
 int32 SChartAxes::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect,

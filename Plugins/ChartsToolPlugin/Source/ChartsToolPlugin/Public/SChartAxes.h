@@ -90,5 +90,15 @@ protected:
 	FVector2D GetOriginPosition(const FVector2D& Size) const;
 	
 public:
+	// 将 点位坐标映射到 widegt 本地坐标，用于绘制折线等
+	FVector2D DataToLocal(const FVector2D& DataPoint, const FGeometry& AllottedGeometry) const;
+
+	// 获取当前 X轴范围
+	void GetXRange(float& OutMin, float& OutMax) const;
+
+	// 获取当前 Y轴范围
+	void GetYRange(float& OutMin, float& OutMax) const;
+
+	
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;
 };
