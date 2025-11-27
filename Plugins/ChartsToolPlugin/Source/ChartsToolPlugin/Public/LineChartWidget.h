@@ -39,7 +39,7 @@ public:
 protected:
 
 	TSharedPtr<SLineChartWidget> SlateWidget;
-	TSharedPtr<SChartAxes> ChartAxes;
+	TSharedPtr<SChartAxes> SlateAxes;
 	virtual TSharedRef<SWidget> RebuildWidget() override;
 
 public:
@@ -69,7 +69,7 @@ public:
 
 		for (int i = 0; i < Data.Num(); i++)
 		{
-			
+			Data[i] = SlateAxes.ToSharedRef()->DataToLocal(Data[i]);
 		}
 		return Data;
 	}

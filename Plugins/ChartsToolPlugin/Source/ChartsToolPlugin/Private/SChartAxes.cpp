@@ -46,10 +46,12 @@ FVector2D SChartAxes::GetOriginPosition(const FVector2D& Size) const
 	}
 }
 
-FVector2D SChartAxes::DataToLocal(const FVector2D& DataPoint, const FGeometry& AllottedGeometry) const
+FVector2D SChartAxes::DataToLocal( const FVector2D& DataPoint) const
 {
+
+	FVector2D CurrentSize = GetOriginPosition(CacheGeometry.GetLocalSize());
 	// 获取 widget大小
-	FVector2D Size = AllottedGeometry.GetLocalSize();
+	FVector2D Size = CacheGeometry.GetLocalSize();
 	float Width = Size.X;
 	float Height = Size.Y;
 
@@ -58,6 +60,44 @@ FVector2D SChartAxes::DataToLocal(const FVector2D& DataPoint, const FGeometry& A
 	float maxX = XAxisMax.Get();
 	float minY = YAxisMin.Get();
 	float maxY = YAxisMax.Get();
+
+	float rangeX = FMath::IsNearlyEqual(maxX, minX) ? 1.f : (maxX - minX);
+	float rangeY = FMath::IsNearlyEqual(maxY, minY) ? 1.f : (maxY - minY);
+
+	float nx = (DataPoint.X - minX) / rangeX;
+	float ny = (DataPoint.Y - minY) / rangeY;
+	
+	float px = Width * nx;
+	float py = Height * ny;
+
+	FVector2D AxisX = (FVector2D(CacheGeometry.GetLocalSize().X, Size.Y) - Size).GetSafeNormal();// X轴正方向归一化向量
+	FVector2D AxisY = (FVector2D(Size.X, 0) - Size).GetSafeNormal();// Y轴正方向归一化向量
+
+	FVector2D OP = DataPoint - Size;
+
+	float localX = FVector2D::DotProduct(OP, AxisX);
+	float localY = FVector2D::DotProduct(OP, AxisY);
+
+	if (localX > 0 && localY > 0)
+	{
+		px = Size.X + (Width - Size.X) * nx;
+		py = Size.Y - (Size.Y - 0) * ny;
+		
+	}else if (localX < 0 && localY > 0)
+	{
+		px = Size.X - (Size.X - 0) * nx;
+		py = Size.Y - (Size.Y - 0) * ny;
+	}else if (localX < 0 && localY < 0)
+	{
+		px = Size.X - (Size.X - 0) * nx;
+		py = Size.Y + (Height - Size.Y) * ny;
+	}else if (localX > 0 && localY < 0)
+	{
+		px = Size.X + (Width - Size.X) * nx;
+		py = Size.Y + (Height - Size.Y) * ny;
+	}
+
+	return FVector2D(px, py);
 
 	
 }
@@ -78,6 +118,7 @@ int32 SChartAxes::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeome
                           FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle,
                           bool bParentEnabled) const
 {
+	CacheGeometry = AllottedGeometry;
 	FVector2D Size = GetOriginPosition(AllottedGeometry.GetLocalSize());
 	//UE_LOG(LogTemp, Warning, TEXT("neo---Size_X:%d; Size_Y:%d"), Size.X, Size.Y);
 
@@ -105,6 +146,8 @@ int32 SChartAxes::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeome
 		false,
 		AxisThickness.Get()
 	);
+
+	
 	
 	return LayerId + 2;
 }

@@ -31,10 +31,10 @@ public:
 	,_AxisColor(FLinearColor::White)
 	,_AxisThickness(1.5f)
 	,_XAxisMin(0.f)
-	,_XAxisMax(1.f)
+	,_XAxisMax(1000.f)
 	,_XAxisTicks(5)
 	,_YAxisMin(0.f)
-	,_YAxisMax(1.f)
+	,_YAxisMax(1000.f)
 	,_YAxisTicks(5)
 	,_TickFontSize(10)
 	,_ShowGrid(true)
@@ -86,12 +86,14 @@ private:
 	TAttribute<int32> TickFontSize;
 	TAttribute<bool> ShowGrid;
 
+	mutable  FGeometry  CacheGeometry;
+
 protected:
 	FVector2D GetOriginPosition(const FVector2D& Size) const;
 	
 public:
 	// 将 点位坐标映射到 widegt 本地坐标，用于绘制折线等
-	FVector2D DataToLocal(const FVector2D& DataPoint, const FGeometry& AllottedGeometry) const;
+	FVector2D DataToLocal( const FVector2D& DataPoint) const;
 
 	// 获取当前 X轴范围
 	void GetXRange(float& OutMin, float& OutMax) const;

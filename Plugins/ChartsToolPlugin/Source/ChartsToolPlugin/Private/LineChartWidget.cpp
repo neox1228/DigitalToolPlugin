@@ -12,16 +12,17 @@ TSharedRef<SWidget> ULineChartWidget::RebuildWidget()
 	.LineColor(LinearColor)
 	.LineThinckness(LineThickness);
 
+	SlateAxes = SNew(SChartAxes)
+	.Oringin(ChartOrigin)
+	.AxisColor(AxisColor)
+	.AxisThickness(AxisThinkness);
 	
 	
 	TSharedRef<SOverlay> LineChart = SNew(SOverlay)
 
 	+SOverlay::Slot()
 	[
-		SNew(SChartAxes)
-		.Oringin(ChartOrigin)
-		.AxisColor(AxisColor)
-		.AxisThickness(AxisThinkness)
+		SlateAxes.ToSharedRef()
 	]
 	+ SOverlay::Slot()
 	[
