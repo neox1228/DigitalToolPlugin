@@ -54,6 +54,7 @@ FVector2D SChartAxes::DataToLocal( const FVector2D& DataPoint) const
 	FVector2D Size = CacheGeometry.GetLocalSize();
 	float Width = Size.X;
 	float Height = Size.Y;
+	//UE_LOG(LogTemp, Warning, TEXT("neo---坐标原点：X：%d，Y：%d"), Size.X, Size.Y);
 
 	// 获取数据范围（放置除以 0 ）
 	float minX = XAxisMin.Get();
@@ -61,42 +62,46 @@ FVector2D SChartAxes::DataToLocal( const FVector2D& DataPoint) const
 	float minY = YAxisMin.Get();
 	float maxY = YAxisMax.Get();
 
-	float rangeX = FMath::IsNearlyEqual(maxX, minX) ? 1.f : (maxX - minX);
-	float rangeY = FMath::IsNearlyEqual(maxY, minY) ? 1.f : (maxY - minY);
+	// 计算当前点位数据比例
+	float nx = 0;
+	float ny = 0;
+	if (DataPoint.X > 0)
+	{
+		nx = DataPoint.X / maxX;
+	}else if (DataPoint.X <= 0)
+	{
+		nx = DataPoint.X / minX;
+	}
+	if (DataPoint.Y > 0)
+	{
+		ny = DataPoint.Y / maxY;
+	}else if (DataPoint.Y <= 0)
+	{
+		ny = DataPoint.Y / minY;
+	}
+	//UE_LOG(LogTemp, Warning, TEXT("neo---当前比例：X：%d，Y：%d"), nx, ny);
 
-	float nx = (DataPoint.X - minX) / rangeX;
-	float ny = (DataPoint.Y - minY) / rangeY;
-	
+	// 根据当前画布大小映射当前数据到画布坐标系
 	float px = Width * nx;
 	float py = Height * ny;
 
-	FVector2D AxisX = (FVector2D(CacheGeometry.GetLocalSize().X, Size.Y) - Size).GetSafeNormal();// X轴正方向归一化向量
-	FVector2D AxisY = (FVector2D(Size.X, 0) - Size).GetSafeNormal();// Y轴正方向归一化向量
-
-	FVector2D OP = DataPoint - Size;
-
-	float localX = FVector2D::DotProduct(OP, AxisX);
-	float localY = FVector2D::DotProduct(OP, AxisY);
-
-	if (localX > 0 && localY > 0)
+	if (DataPoint.X > 0)
 	{
-		px = Size.X + (Width - Size.X) * nx;
-		py = Size.Y - (Size.Y - 0) * ny;
-		
-	}else if (localX < 0 && localY > 0)
+		px = Size.X + (Width-Size.X) * nx;
+	}else
 	{
-		px = Size.X - (Size.X - 0) * nx;
-		py = Size.Y - (Size.Y - 0) * ny;
-	}else if (localX < 0 && localY < 0)
-	{
-		px = Size.X - (Size.X - 0) * nx;
-		py = Size.Y + (Height - Size.Y) * ny;
-	}else if (localX > 0 && localY < 0)
-	{
-		px = Size.X + (Width - Size.X) * nx;
-		py = Size.Y + (Height - Size.Y) * ny;
+		px = Size.X + Size.X * nx;
 	}
 
+	if (DataPoint.Y > 0 )
+	{
+		py = Size.Y + Size.Y * ny;
+	}
+	else
+	{
+		py = Size.Y + (Height - Size.Y) * ny;
+	}
+	UE_LOG(LogTemp, Warning, TEXT("neo---映射坐标：X：%d，Y：%d"), px, py);
 	return FVector2D(px, py);
 
 	
@@ -120,7 +125,7 @@ int32 SChartAxes::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeome
 {
 	CacheGeometry = AllottedGeometry;
 	FVector2D Size = GetOriginPosition(AllottedGeometry.GetLocalSize());
-	//UE_LOG(LogTemp, Warning, TEXT("neo---Size_X:%d; Size_Y:%d"), Size.X, Size.Y);
+	UE_LOG(LogTemp, Warning, TEXT("neo---坐标系大小：Size_X:%d; Size_Y:%d"), AllottedGeometry.GetLocalSize().X, AllottedGeometry.GetLocalSize().Y);
 
 
 	//X轴

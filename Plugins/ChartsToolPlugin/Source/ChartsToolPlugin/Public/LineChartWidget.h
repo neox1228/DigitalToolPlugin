@@ -69,8 +69,11 @@ public:
 
 		for (int i = 0; i < Data.Num(); i++)
 		{
+			//UE_LOG(LogTemp, Warning, TEXT("neo---Num：%d =========================="), i);
+
 			Data[i] = SlateAxes.ToSharedRef()->DataToLocal(Data[i]);
 		}
+		//SlateWidget->SetSize(SlateAxes.ToSharedRef()->GetOriginPosition())
 		return Data;
 	}
 
