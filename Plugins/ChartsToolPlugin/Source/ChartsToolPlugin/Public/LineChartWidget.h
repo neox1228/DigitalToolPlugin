@@ -40,6 +40,8 @@ protected:
 
 	TSharedPtr<SLineChartWidget> SlateWidget;
 	TSharedPtr<SChartAxes> SlateAxes;
+
+	FVector2D SlotSize = FVector2D::ZeroVector;
 	virtual TSharedRef<SWidget> RebuildWidget() override;
 
 public:
@@ -71,7 +73,7 @@ public:
 		{
 			//UE_LOG(LogTemp, Warning, TEXT("neo---Num：%d =========================="), i);
 
-			Data[i] = SlateAxes.ToSharedRef()->DataToLocal(Data[i]);
+			//Data[i] = SlateAxes.ToSharedRef()->DataToLocal(Data[i]);
 		}
 		//SlateWidget->SetSize(SlateAxes.ToSharedRef()->GetOriginPosition())
 		return Data;

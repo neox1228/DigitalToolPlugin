@@ -22,6 +22,7 @@ void SChartAxes::Construct(const FArguments& InArgs)
 
 	TickFontSize = InArgs._TickFontSize;
 	ShowGrid = InArgs._ShowGrid;
+	SlotSize = InArgs._SlotSize;
 
 	
 }
@@ -52,8 +53,8 @@ FVector2D SChartAxes::DataToLocal( const FVector2D& DataPoint) const
 	FVector2D CurrentSize = GetOriginPosition(CacheGeometry.GetLocalSize());
 	// 获取 widget大小
 	FVector2D Size = CacheGeometry.GetLocalSize();
-	float Width = Size.X;
-	float Height = Size.Y;
+	float Width = abs(Size.X);
+	float Height = abs(Size.Y);
 	//UE_LOG(LogTemp, Warning, TEXT("neo---坐标原点：X：%d，Y：%d"), Size.X, Size.Y);
 
 	// 获取数据范围（放置除以 0 ）
@@ -133,7 +134,7 @@ int32 SChartAxes::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeome
 		OutDrawElements,
 		LayerId,
 		AllottedGeometry.ToPaintGeometry(),
-		{FVector2D(0, Size.Y), Size, FVector2D(AllottedGeometry.GetLocalSize().X, Size.Y)},
+		{FVector2D(0, Size.Y), Size, FVector2D(AllottedGeometry.Size.X, Size.Y)},
 		ESlateDrawEffect::None,
 		AxisColor.Get(),
 		false,
@@ -145,7 +146,7 @@ int32 SChartAxes::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeome
 		OutDrawElements,
 		LayerId + 1,
 		AllottedGeometry.ToPaintGeometry(),
-		{FVector2D(Size.X, 0), Size, FVector2D(Size.X, AllottedGeometry.GetLocalSize().Y)},
+		{FVector2D(Size.X, 0), Size, FVector2D(Size.X, AllottedGeometry.Size.Y)},
 		ESlateDrawEffect::None,
 		AxisColor.Get(),
 		false,

@@ -4,9 +4,18 @@
 #include "LineChartWidget.h"
 
 #include "SLineChartWidget.h"
+#include "Components/CanvasPanelSlot.h"
 
 TSharedRef<SWidget> ULineChartWidget::RebuildWidget()
 {
+
+	UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(Slot);
+
+	if (CanvasSlot)
+	{
+		SlotSize = CanvasSlot->GetSize();
+	}
+	
 	SlateWidget = SNew(SLineChartWidget)
 	.Data(BIND_UOBJECT_ATTRIBUTE(TArray<FVector2D>, GetData))
 	.LineColor(LinearColor)
@@ -15,6 +24,7 @@ TSharedRef<SWidget> ULineChartWidget::RebuildWidget()
 	SlateAxes = SNew(SChartAxes)
 	.Oringin(ChartOrigin)
 	.AxisColor(AxisColor)
+	.SlotSize(SlotSize)
 	.AxisThickness(AxisThinkness);
 	
 	

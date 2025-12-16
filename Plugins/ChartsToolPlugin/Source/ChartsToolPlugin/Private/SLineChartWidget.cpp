@@ -38,7 +38,7 @@ FVector2D SLineChartWidget::DataToLocal(const FVector2D& DataPoint, const FGeome
 		nx = DataPoint.X / maxX;
 	}else if (DataPoint.X <= 0)
 	{
-		nx = DataPoint.X / minX;
+		nx = DataPoint.X / abs(minX);
 	}
 	if (DataPoint.Y > 0)
 	{
@@ -78,7 +78,7 @@ int32 SLineChartWidget::OnPaint(const FPaintArgs& Args, const FGeometry& Allotte
                                 const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
 {
 	const TArray<FVector2D>& Points = Data.Get();
-	UE_LOG(LogTemp, Warning, TEXT("neo---折线图大小：Size_X:%d; Size_Y:%d"), AllottedGeometry.GetLocalSize().X, AllottedGeometry.GetLocalSize().Y);
+	//UE_LOG(LogTemp, Warning, TEXT("neo---折线图大小：Size_X:%d; Size_Y:%d"), AllottedGeometry.GetLocalSize().X, AllottedGeometry.GetLocalSize().Y);
 
 	if (Points.Num() < 2)
 	{
@@ -89,8 +89,8 @@ int32 SLineChartWidget::OnPaint(const FPaintArgs& Args, const FGeometry& Allotte
 
 	for (int32 i = 0; i < Points.Num() - 1; i++)
 	{
-		FVector2D P1 = Points[i];
-		FVector2D P2 = Points[i + 1];
+		FVector2D P1 = DataToLocal(Points[i], AllottedGeometry);
+		FVector2D P2 = DataToLocal(Points[i + 1], AllottedGeometry);
 
 		FSlateDrawElement::MakeLines(OutDrawElements,LayerId,AllottedGeometry.ToPaintGeometry(),{P1, P2},ESlateDrawEffect::None, LineColor.Get(),true
 			,LineThinckness.Get());

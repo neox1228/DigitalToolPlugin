@@ -38,6 +38,7 @@ public:
 	,_YAxisTicks(5)
 	,_TickFontSize(10)
 	,_ShowGrid(true)
+	,_SlotSize(FVector2D::ZeroVector)
 	{}
 	
 	/*
@@ -59,6 +60,7 @@ public:
 	SLATE_ATTRIBUTE(float, YAxisMin) // Y轴最小值
 	SLATE_ATTRIBUTE(float, YAxisMax) // Y轴最大值
 	SLATE_ATTRIBUTE(int32, YAxisTicks) // Y轴刻度
+	SLATE_ATTRIBUTE(FVector2D, SlotSize)// 绘制框大小
 
 	/*
 	 *坐标轴效果
@@ -82,6 +84,7 @@ private:
 	TAttribute<float> YAxisMin;
 	TAttribute<float> YAxisMax;
 	TAttribute<int32> YAxisTicks;
+	TAttribute<FVector2D> SlotSize;
 
 	TAttribute<int32> TickFontSize;
 	TAttribute<bool> ShowGrid;
