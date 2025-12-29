@@ -3,10 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "FChartMath.h"
 #include "SChartAxes.h"
 #include "SLineChartWidget.h"
 #include "Components/Widget.h"
 #include "LineChartWidget.generated.h"
+
+
+/** 前向声明 */
 
 /**
  * 
@@ -17,24 +21,30 @@ class CHARTSTOOLPLUGIN_API ULineChartWidget : public UWidget
 	GENERATED_BODY()
 
 public:
+	//折线图数据（用于测试）
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="LineChart")
 	TArray<FVector2D> Data;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="LineChart")
-	FLinearColor LinearColor = FLinearColor::White;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="LineChart")
-	float LineThickness = 2.f;
-
+	
+	//坐标原点位置
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="LineChart")
 	EChartOrigin ChartOrigin = EChartOrigin::LeftBottom;
 
+	//坐标轴颜色
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="LineChart")
 	FLinearColor AxisColor;
 
+	// 坐标轴粗细
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="LineChart")
 	float AxisThinkness;
-	
+
+	// 折线颜色
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="LineChart")
+	FLinearColor LinearColor = FLinearColor::White;
+
+	//折线粗细
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="LineChart")
+	float LineThickness = 2.f;
+
 
 protected:
 
@@ -45,37 +55,12 @@ protected:
 	virtual TSharedRef<SWidget> RebuildWidget() override;
 
 public:
-	void SyncProperties();
+	virtual void SynchronizeProperties() override;
 	virtual void ReleaseSlateResources(bool bReleaseChildren) override;
 
 	UFUNCTION(BlueprintCallable, Category="LineChart")
 	TArray<FVector2D> GetData()
 	{
-		FVector2D TempChartPosion ;
-		switch (ChartOrigin)
-		{
-			case EChartOrigin::LeftBottom:  TempChartPosion = FVector2D(0, 1);
-			case EChartOrigin::LeftCenter: TempChartPosion = FVector2D(0, 0.5);
-			case EChartOrigin::LeftTop: TempChartPosion = FVector2D(0, 0);
-			
-			case EChartOrigin::CenterBottom: TempChartPosion = FVector2D( 0.5, 1);
-			case EChartOrigin::Center: TempChartPosion = FVector2D(0.5, 0.5);
-			case EChartOrigin::CenterTop: TempChartPosion = FVector2D(0.5, 0);
-	
-			case EChartOrigin::RightBottom: TempChartPosion = FVector2D(1, 1);
-			case EChartOrigin::RightCenter: TempChartPosion = FVector2D(1, 0.5);
-			case EChartOrigin::RightTop: TempChartPosion = FVector2D(1,0);
-	
-			default: TempChartPosion = FVector2D(0, 1);
-		}
-
-		for (int i = 0; i < Data.Num(); i++)
-		{
-			//UE_LOG(LogTemp, Warning, TEXT("neo---Num：%d =========================="), i);
-
-			//Data[i] = SlateAxes.ToSharedRef()->DataToLocal(Data[i]);
-		}
-		//SlateWidget->SetSize(SlateAxes.ToSharedRef()->GetOriginPosition())
 		return Data;
 	}
 

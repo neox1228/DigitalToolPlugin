@@ -3,7 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "FChartMath.h"
 #include "Widgets/SCompoundWidget.h"
+
+/** 前向声明 */
 
 /**
  * 
@@ -21,18 +24,18 @@ public:
 
 	/** Constructs this widget with InArgs */
 	void Construct(const FArguments& InArgs);
-	FVector2D DataToLocal( const FVector2D& DataPoint, const FGeometry& CacheGeometry) const;
 
 private:
+	TAttribute<EChartOrigin> Origin;
 	TAttribute<TArray<FVector2D>> Data;
 	TAttribute<FLinearColor> LineColor;
 	TAttribute<float> LineThinckness;
-	TAttribute<FVector2D> CurrentSize;
+	
 
 public:
-	void SetSize(FVector2D InSize)
+	void SetOrigin(EChartOrigin InOrigin)
 	{
-		CurrentSize = InSize;
+		Origin = InOrigin;
 	}
 	void SetData(TArray<FVector2D> InData)
 	{

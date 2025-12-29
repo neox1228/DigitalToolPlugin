@@ -8,13 +8,7 @@
 
 TSharedRef<SWidget> ULineChartWidget::RebuildWidget()
 {
-
-	UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(Slot);
-
-	if (CanvasSlot)
-	{
-		SlotSize = CanvasSlot->GetSize();
-	}
+	
 	
 	SlateWidget = SNew(SLineChartWidget)
 	.Data(BIND_UOBJECT_ATTRIBUTE(TArray<FVector2D>, GetData))
@@ -22,9 +16,7 @@ TSharedRef<SWidget> ULineChartWidget::RebuildWidget()
 	.LineThinckness(LineThickness);
 
 	SlateAxes = SNew(SChartAxes)
-	.Oringin(ChartOrigin)
 	.AxisColor(AxisColor)
-	.SlotSize(SlotSize)
 	.AxisThickness(AxisThinkness);
 	
 	
@@ -38,16 +30,23 @@ TSharedRef<SWidget> ULineChartWidget::RebuildWidget()
 	[
 		SlateWidget.ToSharedRef()
 	];
-	
+	//UE_LOG(LogTemp, Warning, TEXT("neo---OverlaySize( X:%f, Y:%f)"),LineChart->GetDesiredSize().X, LineChart->GetDesiredSize().Y);
+
 	return LineChart;
 }
 
-void ULineChartWidget::SyncProperties()
+void ULineChartWidget::SynchronizeProperties()
 {
 	Super::SynchronizeProperties();
 	if (SlateWidget.IsValid())
 	{
+		FChartMath::SortByValueX(Data);
 		SlateWidget->SetData(Data);
+		SlateWidget->SetOrigin(ChartOrigin);
+	}
+	if (SlateAxes.IsValid())
+	{
+		SlateAxes->SetOrigin(ChartOrigin);
 	}
 }
 
