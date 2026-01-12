@@ -20,12 +20,16 @@ public:
 		SLATE_ATTRIBUTE(FLinearColor, LineColor)
 		SLATE_ATTRIBUTE(float, LineThinckness)
 	    SLATE_ATTRIBUTE(FVector2D, CurrentSize)
+		SLATE_ATTRIBUTE(float, CustomBoundX)
+		SLATE_ATTRIBUTE(float, CustomBoundY)
 	SLATE_END_ARGS()
 
 	/** Constructs this widget with InArgs */
 	void Construct(const FArguments& InArgs);
 
 private:
+	TAttribute<float> CustomBoundX;
+	TAttribute<float> CustomBoundY;
 	TAttribute<EChartOrigin> Origin;
 	TAttribute<TArray<FVector2D>> Data;
 	TAttribute<FLinearColor> LineColor;
@@ -40,6 +44,13 @@ public:
 	void SetData(TArray<FVector2D> InData)
 	{
 		Data = InData;
+	}
+
+	void SyncCustomBoundProperty(float InCustomBoundX, float InCustomBoundY)
+	{
+		
+		CustomBoundX = InCustomBoundX;
+		CustomBoundY = InCustomBoundY;
 	}
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;
 };

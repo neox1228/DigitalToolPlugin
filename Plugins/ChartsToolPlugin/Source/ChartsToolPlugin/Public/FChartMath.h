@@ -23,6 +23,31 @@ enum class EChartOrigin : uint8
 	RightTop       UMETA(DisplayName="Right-Top"),
 };
 
+UENUM(BlueprintType)
+enum class EAxisType : uint8
+{
+	Numeric, // 数值模式
+	Category // 分类模式（例如月份，名称）
+};
+
+USTRUCT(BlueprintType)
+struct FSeriesSetting
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<FVector2D> Data;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FLinearColor SeriesColor = FLinearColor::Blue;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool Smooth;
+
+	
+	
+};
+
 USTRUCT(BlueprintType)
 struct CHARTSTOOLPLUGIN_API FChartAxisSettings
 {
@@ -56,15 +81,27 @@ public:
 	FChartMath() = delete;
 
 	/**
-	 * 通用最值查询函数
+	 * 单折线最值查询函数
 	 * @param DataArray 原始数组
-	 * @param OutMin 输出最小值
-	 * @param OutMax 输出最大值
+	 * @param OutMaxX x轴最大值
+	 * @param OutMaxY y轴最大值
 	 */
 	static void GetArrayRange(
 		const TArray<FVector2D>& DataArray,
-		FVector2D& OutMin,
-		FVector2D& OutMax
+		float& OutMaxX,
+		float& OutMaxY
+		);
+
+	/**
+	 * 多折线数据最值查询函数
+	 * @param DataMap 折线数据Map
+	 * @param OutMaxX x轴最大值
+	 * @param OutMaxY y轴最大值
+	 */
+	static void GetArrayRange(
+		const TMap<FString, FSeriesSetting>& DataMap,
+		float& OutMaxX,
+		float& OutMaxY
 		);
 
 	/**
@@ -99,6 +136,14 @@ public:
 	static void SortByValueX(
 		TArray<FVector2D>& InDataArray
 		);
+
+	/**
+	 * Nice Numbers 算法，用于将区间数的刻度步长始终落在1，2， 5， 10 及其倍数上
+	 * @param MaxValue 区间最大值
+	 * @param DesiredTicks = 10
+	 * @return float 当前步长
+	 */
+	static float GetNiceStep(float MaxValue, int32 DesiredTicks = 5);
 	
 	//~FChartMath() = delete;
 };
