@@ -4,7 +4,7 @@
 #include "FChartMath.h"
 
 
-void FChartMath::GetArrayRange(const TArray<FVector2D>& DataArray, float& OutMaxX, float& OutMaxY)
+void FChartMath::GetArrayRange(const TArray<FVector2D>& DataArray, float& OutMaxX, float& OutMaxY, EValue Option)
 {
 	// 1. 防御性检查：如果数组为空，直接返回。防止DataArray[0] 崩溃
 	if (DataArray.Num() == 0)
@@ -22,12 +22,23 @@ void FChartMath::GetArrayRange(const TArray<FVector2D>& DataArray, float& OutMax
 		const FVector2D& Temp = DataArray[i];
 
 		// 4. 使用 FMath::Min/Max,
-		OutMaxX = FMath::Max(OutMaxX, FMath::Abs(Temp.X));
-		OutMaxY = FMath::Max(OutMaxY, FMath::Abs(Temp.Y));
+		switch (Option)
+		{
+		case EValue::Max:
+			OutMaxX = FMath::Max(OutMaxX, Temp.X);
+			OutMaxY = FMath::Max(OutMaxY, Temp.Y);
+			break;
+		case EValue::Min:
+			OutMaxX = FMath::Min(OutMaxX, Temp.X);
+			OutMaxY = FMath::Min(OutMaxY, Temp.Y);
+			break;
+			
+		}
+		
 	}
 }
 
-void FChartMath::GetArrayRange(const TMap<FString, FSeriesSetting>& DataMap, float& OutMaxX, float& OutMaxY)
+void FChartMath::GetArrayRange(const TMap<FString, FSeriesSetting>& DataMap, float& OutMaxX, float& OutMaxY, EValue Option)
 {
 	// 1. 防御性检查：如果数组为空，直接返回。防止DataArray[0] 崩溃
 	if (DataMap.Num() == 0)
@@ -44,51 +55,51 @@ void FChartMath::GetArrayRange(const TMap<FString, FSeriesSetting>& DataMap, flo
 	{
 		float SingleMaxX;
 		float SingleMaxY;
-		GetArrayRange(Elem.Value.Data,SingleMaxX, SingleMaxY);
-		OutMaxX = FMath::Max(OutMaxX, SingleMaxX);
-		OutMaxY = FMath::Max(OutMaxY, SingleMaxY);
+		GetArrayRange(Elem.Value.Data,SingleMaxX, SingleMaxY, Option);
+		switch (Option)
+		{
+		case EValue::Max:
+			OutMaxX = FMath::Max(OutMaxX, SingleMaxX);
+			OutMaxY = FMath::Max(OutMaxY, SingleMaxY);
+			break;
+		case EValue::Min:
+			OutMaxX = FMath::Min(OutMaxX, SingleMaxX);
+			OutMaxY = FMath::Min(OutMaxY, SingleMaxY);
+			break;
+			
+		}
+		
 	}
 }
 
-FVector2D FChartMath::GetOriginLocation(const EChartOrigin& InOrigin, const FGeometry& InGeometry)
+
+FVector2D FChartMath::GetOriginLocation(const float& InMaxX, const float& InMaxY, const float& InMinX,
+	const float& InMinY, const FVector2D& InGeometrySize)
 {
-	switch (InOrigin)
-	{
-		case EChartOrigin::LeftBottom:
-			return FVector2D(0, InGeometry.GetLocalSize().Y);
+	FVector2D GeometrySize = InGeometrySize;
 
-		case EChartOrigin::LeftCenter:
-			return FVector2D(0, InGeometry.GetLocalSize().Y/2);
+	// 1. 计算数据 xy轴长度
+	float LengthX = (InMaxX <= 0 ? 0 : InMaxX) - (InMinX >= 0 ? 0 : InMinX);
+	float LengthY = (InMaxY <= 0 ? 0 : InMaxY) - (InMinY >= 0 ? 0 : InMinY);
 
-		case EChartOrigin::LeftTop:
-			return FVector2D(0, 0);
+	// 2. 计算坐标原点的像素坐标值的比例
+	float ScaleX = (0 - (InMinX >= 0 ? 0 : InMinX)) / LengthX;
+	float ScaleY = ((InMaxY <= 0 ? 0 : InMaxY) - 0) / LengthY;
 
-		case EChartOrigin::CenterBottom:
-			return FVector2D(InGeometry.GetLocalSize().X/2, InGeometry.GetLocalSize().Y);
+	// 3. 计算当前坐标原点像素位置
+	FVector2D Point;
+	Point.X = GeometrySize.X * ScaleX;
+	Point.Y = GeometrySize.Y * ScaleY;
 
-		case EChartOrigin::Center:
-			return FVector2D(InGeometry.GetLocalSize().X/2, InGeometry.GetLocalSize().Y/2);
-
-		case EChartOrigin::CenterTop:
-			return FVector2D(InGeometry.GetLocalSize().X/2, 0);
-
-		case EChartOrigin::RightBottom:
-			return FVector2D(InGeometry.GetLocalSize().X, InGeometry.GetLocalSize().Y);
-
-		case EChartOrigin::RightCenter:
-			return FVector2D(InGeometry.GetLocalSize().X, InGeometry.GetLocalSize().Y/2);
-
-		case EChartOrigin::RightTop:
-			return FVector2D(InGeometry.GetLocalSize().X, 0);
-	}
-	return FVector2D::ZeroVector;
+	return Point;
+	
 }
 
-FVector2D FChartMath::DataToLocal(const FVector2D& InData, const FGeometry& InGeometry,
-                                  const FChartAxisSettings& InSettings)
+FVector2D FChartMath::DataToLocal(const FVector2D& InData, const FVector2D& InGeometrySize,
+                                  const FAxisLayout& InSettings)
 {
 	// 获取当前坐标原点的像素坐标值
-	FVector2D CurrentOriginLocation = GetOriginLocation(InSettings.Origin, InGeometry);
+	FVector2D CurrentOriginLocation = GetOriginLocation(InSettings.AxisX_Max, InSettings.AxisY_Max, InSettings.AxisX_Min, InSettings.AxisY_Min, InGeometrySize);
 
 	// 计算数据跨度（防止除以 0）
 	float RangeX = 0;
@@ -105,29 +116,29 @@ FVector2D FChartMath::DataToLocal(const FVector2D& InData, const FGeometry& InGe
 	{
 		if (InData.Y > 0)
 		{
-			RangeX = (InSettings.XAxisMax - 0);
-			RangeY = (InSettings.YAxisMax - 0);
+			RangeX = (InSettings.AxisX_Max - 0);
+			RangeY = (InSettings.AxisY_Max - 0);
 			RangeX = FMath::IsNearlyZero(RangeX) ? 1.0f : RangeX;
 			RangeY = FMath::IsNearlyZero(RangeY) ? 1.0f : RangeY;
-			PixelsPerUnitX = (InGeometry.GetLocalSize().X - CurrentOriginLocation.X) / RangeX;
+			PixelsPerUnitX = (InGeometrySize.X - CurrentOriginLocation.X) / RangeX;
 			PixelsPerUnitY = CurrentOriginLocation.Y / RangeY;
 		}
 		else
 		{
-			RangeX = (InSettings.XAxisMax - 0);
-			RangeY = (0 - InSettings.YAxisMin);
+			RangeX = (InSettings.AxisX_Max - 0);
+			RangeY = (0 - InSettings.AxisY_Min);
 			RangeX = FMath::IsNearlyZero(RangeX) ? 1.0f : RangeX;
 			RangeY = FMath::IsNearlyZero(RangeY) ? 1.0f : RangeY;
-			PixelsPerUnitX = (InGeometry.GetLocalSize().X - CurrentOriginLocation.X) / RangeX;
-			PixelsPerUnitY = (InGeometry.GetLocalSize().Y - CurrentOriginLocation.Y) / RangeY;
+			PixelsPerUnitX = (InGeometrySize.X - CurrentOriginLocation.X) / RangeX;
+			PixelsPerUnitY = (InGeometrySize.Y - CurrentOriginLocation.Y) / RangeY;
 		}
 	}
 	else
 	{
 		if (InData.Y > 0)
 		{
-			RangeX = (0 - InSettings.XAxisMin);
-			RangeY = (InSettings.YAxisMax - 0);
+			RangeX = (0 - InSettings.AxisX_Min);
+			RangeY = (InSettings.AxisY_Max - 0);
 			RangeX = FMath::IsNearlyZero(RangeX) ? 1.0f : RangeX;
 			RangeY = FMath::IsNearlyZero(RangeY) ? 1.0f : RangeY;
 			PixelsPerUnitX = CurrentOriginLocation.X / RangeX;
@@ -135,12 +146,12 @@ FVector2D FChartMath::DataToLocal(const FVector2D& InData, const FGeometry& InGe
 		}
 		else
 		{
-			RangeX = (0 - InSettings.XAxisMin);
-			RangeY = (0 - InSettings.YAxisMin);
+			RangeX = (0 - InSettings.AxisX_Min);
+			RangeY = (0 - InSettings.AxisY_Min);
 			RangeX = FMath::IsNearlyZero(RangeX) ? 1.0f : RangeX;
 			RangeY = FMath::IsNearlyZero(RangeY) ? 1.0f : RangeY;
 			PixelsPerUnitX = CurrentOriginLocation.X / RangeX;
-			PixelsPerUnitY = (InGeometry.GetLocalSize().Y - CurrentOriginLocation.Y) / RangeY;
+			PixelsPerUnitY = (InGeometrySize.Y - CurrentOriginLocation.Y) / RangeY;
 		}
 	}
 
@@ -178,27 +189,78 @@ void FChartMath::SortByValueX(TArray<FVector2D>& InDataArray)
 	}
 }
 
-float FChartMath::GetNiceStep(float MaxValue, int32 DesiredTicks)
+float FChartMath::GetNiceStep(float MaxValue, int32 MaxTicks)
 {
-	if (MaxValue <= 0)
+	
+	// 1. 获取数量级（Magnitude）
+	float Exponent = FMath::FloorToFloat(FMath::LogX(10, MaxValue));
+	float Magnitude = FMath::Pow(10.f, Exponent);
+
+	// 2. 提取有效数字（即 将数字映射到 1~10 之间）
+	float Fraction = MaxValue / Magnitude;
+
+	// 3. 步长种子库
+	const TArray<float> NiceSteps = { 0.5f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f };
+    
+	float SelectedStepSeed = 1.0f;
+	int32 BestTickCount = 0;
+
+	// 4. 寻找最优步长种子
+	for (float Candidate : NiceSteps)
 	{
-		return 1.f;
+		// 计算当前步长种子下的刻度数 (向上取整)
+		int32 CurrentTickCount = FMath::CeilToInt(Fraction / Candidate);
+
+		// 如果刻度数在允许范围内
+		if (CurrentTickCount <= MaxTicks)
+		{
+			// 因为 NiceSteps 是从小到大排列的，
+			// 第一次符合条件的 Candidate 产生的刻度数必然是“最多且最密”的
+			SelectedStepSeed = Candidate;
+			BestTickCount = CurrentTickCount;
+			break; 
+		}
+	}
+	
+	return SelectedStepSeed * Magnitude;
+}
+
+void FChartMath::CalculateAsymmetricAxisLayout(float& AxisMaxValue, float& AxisMinValue, int32& OutPositiveTicks,
+	int32& OutNegativeTicks, float& OutStep, int32 MaxTicks)
+{
+	// 1. 以绝对值最大的一侧作为步长基准
+	float MajorValue = FMath::Max(FMath::Abs(AxisMaxValue), FMath::Abs(AxisMinValue));
+	if(MajorValue == 0) return;
+
+	// 2. 调用 NiceStep 算法计算全局唯一的 OutStep
+	OutStep = GetNiceStep(MajorValue, MaxTicks);
+
+	// 3. 根据全局步长，分别计算正负轴需要的刻度数量
+	OutPositiveTicks = (AxisMaxValue > 0) ? FMath::CeilToInt(AxisMaxValue / OutStep) : 0;
+	OutNegativeTicks = (AxisMinValue > 0) ? FMath::CeilToInt(AxisMinValue / OutStep) : 0;
+
+	// 4. 特殊处理：如果某个半轴过小保留一个刻度范围
+	if (AxisMaxValue * AxisMinValue < 0)
+	{
+		if(OutNegativeTicks == 0 && AxisMinValue < 0)
+		{
+			OutNegativeTicks = 1;
+		}
+		if (OutPositiveTicks == 0 && AxisMaxValue > 0)
+		{
+			OutPositiveTicks = 1;
+		}
 	}
 
-	// 1. 计算原始步长
-	float RawStep = MaxValue / DesiredTicks;
-
-	// 2. 获取数量级（对数）
-	float Exponent = FMath::FloorToFloat(FMath::Loge(RawStep));
-	float Fraction = RawStep / FMath::Pow(10.f, Exponent);
-
-	// 3. 规范化到 1, 2, 5阶梯
-	float NiceFraction;
-	if (Fraction < 1.5f) NiceFraction = 1.f;
-	else if (Fraction < 3.f) NiceFraction = 2.f;
-	else if (Fraction < 7.f) NiceFraction = 5.f;
-	else NiceFraction = 10.f;
-
-	return NiceFraction * FMath::Pow(10.f, Exponent);
+	// 5. 根据计算出的步长和刻度数，计算轴最大最小值
+	if (AxisMaxValue <= 0)
+	{
+		AxisMinValue = -1 * OutNegativeTicks * OutStep;
+	}
+	else
+	{
+		AxisMaxValue = OutPositiveTicks * OutStep;
+	}
+	
 }
 

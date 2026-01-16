@@ -7,17 +7,16 @@
 #include "Components/CanvasPanelSlot.h"
 
 TSharedRef<SWidget> ULineChartWidget::RebuildWidget()
-{
-	
-	
-	/*SlateWidget = SNew(SLineChartWidget)
-	.Data(BIND_UOBJECT_ATTRIBUTE(TArray<FVector2D>, GetData))
-	.LineColor(LinearColor)
-	.LineThinckness(LineThickness);*/
-
+{	
+	// 坐标轴Slate创建及初始化
 	SlateAxes = SNew(SChartAxes)
+	.AxisLayout(AxisLayout)
+	.AxisType(AxisType)
+	.TickFont(TickFont)
 	.AxisColor(AxisColor)
-	.AxisThickness(AxisThinkness);
+	.AxisThickness(AxisThinkness)
+	.GridDensity(GridDensity)
+	.ShowGrid(GridToggle);
 	
 	
 	TSharedRef<SOverlay> LineChart = SNew(SOverlay)
@@ -27,6 +26,7 @@ TSharedRef<SWidget> ULineChartWidget::RebuildWidget()
 		SlateAxes.ToSharedRef()
 	];
 
+	/*
 	if (SeriesMap.Num() > 0)
 	{
 		for (auto& Elem : SeriesMap)
@@ -38,7 +38,7 @@ TSharedRef<SWidget> ULineChartWidget::RebuildWidget()
 			TSharedRef<SLineChartWidget> NewLine = SNew(SLineChartWidget)
 			.Data(SeriesSetting.Data)
 			.LineColor(SeriesSetting.SeriesColor)
-			.LineThinckness(LineThickness);
+			.LineThinckness(SeriesSetting.SeriesThinckness);
 
 			LineMap.Add(SeriesName, NewLine);
 		
@@ -50,25 +50,41 @@ TSharedRef<SWidget> ULineChartWidget::RebuildWidget()
 			];
 		}
 	}
+	*/
 	
-	//UE_LOG(LogTemp, Warning, TEXT("neo---OverlaySize( X:%f, Y:%f)"),LineChart->GetDesiredSize().X, LineChart->GetDesiredSize().Y);
-
 	return LineChart;
 }
 
 void ULineChartWidget::SynchronizeProperties()
 {
 	Super::SynchronizeProperties();
+
+	// 1. 获取当前二维数据中的最大最小值
+	FChartMath::GetArrayRange(SeriesMap, AxisLayout.AxisX_Max, AxisLayout.AxisY_Max, EValue::Max);
+	FChartMath::GetArrayRange(SeriesMap, AxisLayout.AxisX_Min, AxisLayout.AxisY_Min, EValue::Min);
+
+	// 2. 计算当前坐标系基础数据
+	FChartMath::CalculateAsymmetricAxisLayout(AxisLayout.AxisX_Max, AxisLayout.AxisX_Min,
+		AxisLayout.AxisX_OutPositiveTicks, AxisLayout.AxisX_OutNegativeTicks, AxisLayout.AxisX_TickStep);
+	FChartMath::CalculateAsymmetricAxisLayout(AxisLayout.AxisY_Max, AxisLayout.AxisY_Min,
+		AxisLayout.AxisY_OutPositiveTicks, AxisLayout.AxisY_OutNegativeTicks, AxisLayout.AxisY_TickStep);
+
+	// 3. 获取当前坐标原点坐标
+	
+	
+
+
+	// 4. 同步数据
 	if (SlateAxes.IsValid())
 	{
-		SlateAxes->SetOrigin(ChartOrigin);
+		SlateAxes->SyncAxisLayout(AxisLayout);
 		SlateAxes->SyncGridToggle(GridToggle);
 		SlateAxes->SyncGridDensity(GridDensity);
-		SlateAxes->SyncDataBound(CustomBoundX, CustomBoundY);
-	}
-	for (auto& TempLine : LineMap)
-	{
 		
+		
+	}
+	/*for (auto& TempLine : LineMap)
+	{
 		if (TempLine.Value.IsValid())
 		{
 			TempLine.Value->SetData(SeriesMap.Find(TempLine.Key)->Data);
@@ -78,25 +94,11 @@ void ULineChartWidget::SynchronizeProperties()
 			float TempBoundY;
 			FChartMath::GetArrayRange(SeriesMap, TempBoundX, TempBoundY);
 			
-			if (!bIsUseCustomBoundX)
-			{
-				CustomBoundX = TempBoundX;
-			}
-			if (!bIsUseCustomBoundY)
-			{
-				CustomBoundY = TempBoundY;
-			}
+			
 			TempLine.Value->SyncCustomBoundProperty(CustomBoundX,CustomBoundY);
+			TempLine.Value->SyncDataBound(MaxX,MaxY,MinX,MinY);
 		}
-		
-	}
-	/*if (SlateWidget.IsValid())
-	{
-		SlateWidget->SetData(Data);
-		SlateWidget->SetOrigin(ChartOrigin);
-		SlateWidget->SyncCustomBoundProperty(bIsUseCustomBoundX, bIsUseCustomBoundY,CustomBoundX,CustomBoundY);
 	}*/
-	
 }
 
 void ULineChartWidget::ReleaseSlateResources(bool bReleaseChildren)

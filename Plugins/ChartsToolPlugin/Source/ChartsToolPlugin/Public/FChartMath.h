@@ -30,6 +30,19 @@ enum class EAxisType : uint8
 	Category // 分类模式（例如月份，名称）
 };
 
+enum EValue : uint8
+{
+	Max, // 最大值
+	Min // 最小值
+};
+
+/**
+ * 折线相关配置结构体
+ * @param Data 源数据数组
+ * @param SeriesColor 颜色
+ * @param SeriesThinckness 线条粗细
+ * @param Smooth 平滑开关
+ */
 USTRUCT(BlueprintType)
 struct FSeriesSetting
 {
@@ -40,6 +53,9 @@ struct FSeriesSetting
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FLinearColor SeriesColor = FLinearColor::Blue;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float SeriesThinckness = 1.f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool Smooth;
@@ -48,25 +64,50 @@ struct FSeriesSetting
 	
 };
 
+/**
+ * 折线相关配置结构体
+ * @param OriginPosition 源数据数组
+ * @param AxisX_Min 颜色
+ * @param SeriesThinckness 线条粗细
+ * @param Smooth 平滑开关
+ */
 USTRUCT(BlueprintType)
-struct CHARTSTOOLPLUGIN_API FChartAxisSettings
+struct CHARTSTOOLPLUGIN_API FAxisLayout
 {
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chart")
-	EChartOrigin Origin = EChartOrigin::LeftBottom;
+	FVector2D OriginPosition ;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category= "Chart")
-	float XAxisMin = 0.0f;
+	float AxisX_Min = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category= "Chart")
-	float XAxisMax = 100.0f;
+	float AxisX_Max = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category= "Chart")
-	float YAxisMin = 0.0f;
+	float AxisY_Min = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category= "Chart")
-	float YAxisMax = 100.0f;
+	float AxisY_Max = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category= "Chart")
+	int32 AxisX_OutPositiveTicks;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category= "Chart")
+	int32 AxisY_OutPositiveTicks;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category= "Chart")
+	int32 AxisX_OutNegativeTicks;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category= "Chart")
+	int32 AxisY_OutNegativeTicks;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category= "Chart")
+	float AxisX_TickStep;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category= "Chart")
+	float AxisY_TickStep;
 };
 
 /**
@@ -89,7 +130,8 @@ public:
 	static void GetArrayRange(
 		const TArray<FVector2D>& DataArray,
 		float& OutMaxX,
-		float& OutMaxY
+		float& OutMaxY,
+		EValue Option = EValue::Max
 		);
 
 	/**
@@ -101,20 +143,25 @@ public:
 	static void GetArrayRange(
 		const TMap<FString, FSeriesSetting>& DataMap,
 		float& OutMaxX,
-		float& OutMaxY
+		float& OutMaxY,
+		EValue Option = EValue::Max
 		);
 
 	/**
-	 * 根据传入的坐标原点枚举计算当前原点的像素坐标
-	 * @param InOrigin 原点位置枚举
-	 * @param InGeometry 当前 Slate 控件的几何信息
-	 * @return FVector2D 原点的像素坐标
+	 * 根据传入数据的最大最小值，计算当前坐标原点的像素坐标
+	 * @param InMaxX
+	 * @param InMaxY
+	 * @param InMinX
+	 * @param InMinY
+	 * @return FVector2D 坐标原点像素坐标值
 	 */
 	static FVector2D GetOriginLocation(
-		const EChartOrigin& InOrigin,
-		const FGeometry& InGeometry
+		const float& InMaxX,
+		const float& InMaxY,
+		const float& InMinX,
+		const float& InMinY,
+		const FVector2D& InGeometrySize
 		);
-
 	/**
 	 * 将传入的数据点位转换为本地 slate 像素坐标
 	 * @param InData 原始数据（X, Y）
@@ -124,8 +171,8 @@ public:
 	 */
 	static FVector2D DataToLocal(
 		const FVector2D& InData,
-		const FGeometry& InGeometry,
-		const FChartAxisSettings& InSettings
+		const FVector2D& InGeometrySize,
+		const FAxisLayout& InSettings
 		);
 
 	/**
@@ -139,12 +186,32 @@ public:
 
 	/**
 	 * Nice Numbers 算法，用于将区间数的刻度步长始终落在1，2， 5， 10 及其倍数上
-	 * @param MaxValue 区间最大值
-	 * @param DesiredTicks = 10
-	 * @return float 当前步长
+	 * @param MaxValue 当前半轴最大绝对值
+	 * @param MaxValueByStep 计算出最优步长后的当前半轴最大绝对值
+	 * @param MaxTicks 当前半轴刻度最大数量
+	 * @return float 当前半轴最优刻度数量
 	 */
-	static float GetNiceStep(float MaxValue, int32 DesiredTicks = 5);
-	
+	static float GetNiceStep(
+		float MaxValue,
+		int32 MaxTicks = 7
+		);
+
+	/**
+	 * 根据传入数据轴区间，计算坐标系轴区间，正负轴刻度数量和步长
+	 * @param AxisMaxValue 数据轴最大值
+	 * @param AxisMinValue 数据轴最小值
+	 * @param MaxTickNum 长半轴刻度数量
+	 * @param MinTickNum 短半轴刻度数量
+	 * @param Step 刻度步长
+	 */
+	static void CalculateAsymmetricAxisLayout(
+		float& AxisMaxValue,
+		float& AxisMinValue,
+		int32& OutPositiveTicks,
+		int32& OutNegativeTicks,
+		float& OutStep,
+		int32 MaxTicks = 7
+		);
 	//~FChartMath() = delete;
 };
 
