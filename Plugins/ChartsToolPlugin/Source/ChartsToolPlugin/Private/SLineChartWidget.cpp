@@ -34,31 +34,14 @@ int32 SLineChartWidget::OnPaint(const FPaintArgs& Args, const FGeometry& Allotte
 		return LayerId;
 	}
 
-	//FVector2D Size = AllottedGeometry.GetLocalSize();
-	float OutMaxX = CustomBoundX.Get();
-	float OutMaxY = CustomBoundY.Get();
-	/*FChartMath::GetArrayRange(Points,OutMaxX,OutMaxY);
-	if (bUseCustomBoundX.Get())
-	{
-		OutMaxX 
-	}
-	if (bUseCustomBoundY.Get())
-	{
-		OutMaxY 
-	}*/
-	//UE_LOG(LogTemp, Warning, TEXT("neo---当前数据x轴最大值：%f, y轴最大值：%f"), OutMaxX, OutMaxY);
-
-	/*FChartAxisSettings AxisSettings ;
-	AxisSettings.Origin = Origin.Get();
-	AxisSettings.XAxisMax = MaxX.Get();
-	AxisSettings.XAxisMin = MinX.Get();
-	AxisSettings.YAxisMax = MaxY.Get();
-	AxisSettings.YAxisMin = MinY.Get();
+	
+	FAxisLayout AxisSettings = AxisLayout.Get() ;
+	
 
 	TArray<FVector2D> RenderPoints;
 	for (int32 i = 0; i < Points.Num(); i++)
 	{
-		FVector2D LocalPoint = FChartMath::DataToLocal(Points[i],AllottedGeometry, AxisSettings);
+		FVector2D LocalPoint = FChartMath::DataToLocal(Points[i],AllottedGeometry.GetLocalSize(),AxisSettings);
 
 		LocalPoint.X = FMath::RoundToFloat(LocalPoint.X) + 0.5f;
 		LocalPoint.Y = FMath::RoundToFloat(LocalPoint.Y) + 0.5f;
@@ -73,7 +56,7 @@ int32 SLineChartWidget::OnPaint(const FPaintArgs& Args, const FGeometry& Allotte
 		RenderPoints, ESlateDrawEffect::None,
 		LineColor.Get(),
 		true,
-		LineThinckness.Get());*/
+		LineThinckness.Get());
 	return LayerId + 1;
 }
 

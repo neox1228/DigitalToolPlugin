@@ -26,7 +26,6 @@ TSharedRef<SWidget> ULineChartWidget::RebuildWidget()
 		SlateAxes.ToSharedRef()
 	];
 
-	/*
 	if (SeriesMap.Num() > 0)
 	{
 		for (auto& Elem : SeriesMap)
@@ -50,7 +49,6 @@ TSharedRef<SWidget> ULineChartWidget::RebuildWidget()
 			];
 		}
 	}
-	*/
 	
 	return LineChart;
 }
@@ -68,13 +66,9 @@ void ULineChartWidget::SynchronizeProperties()
 		AxisLayout.AxisX_OutPositiveTicks, AxisLayout.AxisX_OutNegativeTicks, AxisLayout.AxisX_TickStep);
 	FChartMath::CalculateAsymmetricAxisLayout(AxisLayout.AxisY_Max, AxisLayout.AxisY_Min,
 		AxisLayout.AxisY_OutPositiveTicks, AxisLayout.AxisY_OutNegativeTicks, AxisLayout.AxisY_TickStep);
-
-	// 3. 获取当前坐标原点坐标
+	UE_LOG(LogTemp, Warning, TEXT("neo---X轴最大值：%f ; X轴最小值：%f ; Step：%f"), AxisLayout.AxisX_Max, AxisLayout.AxisX_Min, AxisLayout.AxisX_TickStep);
 	
-	
-
-
-	// 4. 同步数据
+	// 3. 同步数据
 	if (SlateAxes.IsValid())
 	{
 		SlateAxes->SyncAxisLayout(AxisLayout);
@@ -83,22 +77,19 @@ void ULineChartWidget::SynchronizeProperties()
 		
 		
 	}
-	/*for (auto& TempLine : LineMap)
+	for (auto& TempLine : LineMap)
 	{
 		if (TempLine.Value.IsValid())
 		{
 			TempLine.Value->SetData(SeriesMap.Find(TempLine.Key)->Data);
-			TempLine.Value->SetOrigin(ChartOrigin);
+			TempLine.Value->SyncAxisLayout(AxisLayout);
 
 			float TempBoundX;
 			float TempBoundY;
 			FChartMath::GetArrayRange(SeriesMap, TempBoundX, TempBoundY);
 			
-			
-			TempLine.Value->SyncCustomBoundProperty(CustomBoundX,CustomBoundY);
-			TempLine.Value->SyncDataBound(MaxX,MaxY,MinX,MinY);
 		}
-	}*/
+	}
 }
 
 void ULineChartWidget::ReleaseSlateResources(bool bReleaseChildren)

@@ -212,6 +212,10 @@ public:
 		float& OutStep,
 		int32 MaxTicks = 7
 		);
+
+	/**
+	 * 曲线计算公式
+	 */
 	//~FChartMath() = delete;
 };
 

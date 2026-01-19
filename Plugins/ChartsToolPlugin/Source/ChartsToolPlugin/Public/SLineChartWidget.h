@@ -26,6 +26,7 @@ public:
 		SLATE_ATTRIBUTE(float, MaxY)
 		SLATE_ATTRIBUTE(float, MinX)
 		SLATE_ATTRIBUTE(float, MinY)
+	SLATE_ATTRIBUTE(FAxisLayout, AxisLayout)
 	SLATE_END_ARGS()
 
 	/** Constructs this widget with InArgs */
@@ -38,6 +39,8 @@ private:
 	TAttribute<float> MaxY;
 	TAttribute<float> MinX;
 	TAttribute<float> MinY;
+
+	TAttribute<FAxisLayout> AxisLayout;
 	TAttribute<EChartOrigin> Origin;
 	TAttribute<TArray<FVector2D>> Data;
 	TAttribute<FLinearColor> LineColor;
@@ -67,6 +70,11 @@ public:
 		MaxY = InMaxY;
 		MinX = InMinX;
 		MinY = InMinY;
+	}
+
+	void SyncAxisLayout(FAxisLayout InAxisLayout)
+	{
+		AxisLayout = InAxisLayout;
 	}
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;
 };

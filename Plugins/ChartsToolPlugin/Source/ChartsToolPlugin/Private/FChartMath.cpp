@@ -237,7 +237,9 @@ void FChartMath::CalculateAsymmetricAxisLayout(float& AxisMaxValue, float& AxisM
 
 	// 3. 根据全局步长，分别计算正负轴需要的刻度数量
 	OutPositiveTicks = (AxisMaxValue > 0) ? FMath::CeilToInt(AxisMaxValue / OutStep) : 0;
-	OutNegativeTicks = (AxisMinValue > 0) ? FMath::CeilToInt(AxisMinValue / OutStep) : 0;
+	OutNegativeTicks = (AxisMinValue < 0) ? FMath::CeilToInt(FMath::Abs(AxisMinValue) / OutStep) : 0;
+	//UE_LOG(LogTemp, Warning, TEXT("neo---正半轴刻度数：%f; 负半轴刻度数： %f"), OutPositiveTicks, OutNegativeTicks);
+
 
 	// 4. 特殊处理：如果某个半轴过小保留一个刻度范围
 	if (AxisMaxValue * AxisMinValue < 0)
@@ -253,14 +255,15 @@ void FChartMath::CalculateAsymmetricAxisLayout(float& AxisMaxValue, float& AxisM
 	}
 
 	// 5. 根据计算出的步长和刻度数，计算轴最大最小值
-	if (AxisMaxValue <= 0)
+	/*if (AxisMaxValue <= 0)
 	{
 		AxisMinValue = -1 * OutNegativeTicks * OutStep;
 	}
 	else
 	{
 		AxisMaxValue = OutPositiveTicks * OutStep;
-	}
-	
+	}*/
+	AxisMinValue = -1 * OutNegativeTicks * OutStep;
+	AxisMaxValue = OutPositiveTicks * OutStep;
 }
 
