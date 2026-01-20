@@ -216,6 +216,7 @@ public:
 	/**
 	 * 曲线计算公式
 	 */
+	static void CalculateCatmullRomPoints(const TArray<FVector2D>& RawPoints, TArray<FVector2D>& OutRenderPoints, int32 Segments = 30);
 	//~FChartMath() = delete;
 };
 

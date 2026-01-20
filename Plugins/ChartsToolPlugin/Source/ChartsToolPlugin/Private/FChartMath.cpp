@@ -267,3 +267,49 @@ void FChartMath::CalculateAsymmetricAxisLayout(float& AxisMaxValue, float& AxisM
 	AxisMaxValue = OutPositiveTicks * OutStep;
 }
 
+void FChartMath::CalculateCatmullRomPoints(const TArray<FVector2D>& RawPoints, TArray<FVector2D>& OutRenderPoints, int32 Segments)
+{
+	// 1. 安全检查：至少需要2个点才能连成线
+	OutRenderPoints.Reset();
+	int32 NumPoints = RawPoints.Num();
+	if (NumPoints < 2) return;
+
+	// 2. 预分配内存，避免 Add 过程中频繁扩容（性能优化）
+	OutRenderPoints.Reserve(NumPoints * Segments);
+
+	// 3. 开始循环处理每一段线
+	for (int32 i = 0; i < NumPoints - 1; ++i)
+	{
+		// Catmull-Rom 需要当前段前后的两个控制点，一共4个点
+		// 使用 FMath::Clamp 保证索引永远不会越界（即使只有2个点也能安全运行）
+		FVector2D P0 = RawPoints[FMath::Max(i - 1, 0)];
+		FVector2D P1 = RawPoints[i];
+		FVector2D P2 = RawPoints[i + 1];
+		FVector2D P3 = RawPoints[FMath::Min(i + 2, NumPoints - 1)];
+
+		// 在 P1 和 P2 之间插入点
+		for (int32 Step = 0; Step <= Segments; ++Step)
+		{
+			float t = (float)Step / (float)Segments;
+			float t2 = t * t;
+			float t3 = t2 * t;
+
+			// Catmull-Rom 标准公式
+			FVector2D InterpolatedPoint = 0.5f * (
+				(P1 * 2.0f) +
+				(P2 - P0) * t +
+				(P0 * 2.0f - P1 * 5.0f + P2 * 4.0f - P3) * t2 +
+				(P1 * 3.0f - P0 - P2 * 3.0f + P3) * t3
+			);
+
+			OutRenderPoints.Add(InterpolatedPoint);
+            
+			// 如果是最后一段，最后一步需要加上，如果是中间段，跳过最后一个点防止点重合
+			if (i < NumPoints - 2 && Step == Segments)
+			{
+				OutRenderPoints.Pop(); 
+			}
+		}
+	}
+}
+

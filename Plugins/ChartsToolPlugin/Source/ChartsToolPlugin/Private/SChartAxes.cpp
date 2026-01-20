@@ -26,13 +26,15 @@ void SChartAxes::Construct(const FArguments& InArgs)
 }
 
 int32 SChartAxes::OnPaint(const FPaintArgs& Args,
-	const FGeometry& AllottedGeometry,
-	const FSlateRect& MyCullingRect,
-	FSlateWindowElementList& OutDrawElements,
-	int32 LayerId,
-	const FWidgetStyle& InWidgetStyle,
-	bool bParentEnabled) const
+                          const FGeometry& AllottedGeometry,
+                          const FSlateRect& MyCullingRect,
+                          FSlateWindowElementList& OutDrawElements,
+                          int32 LayerId,
+                          const FWidgetStyle& InWidgetStyle,
+                          bool bParentEnabled) const
 {
+	//UE_LOG(LogTemp, Warning, TEXT("neo---SlateLocalSize.X：%f ; SlateLocalSize.Y：%f "), AllottedGeometry.GetLocalSize().X, AllottedGeometry.GetLocalSize().Y);
+	
 	if (ShowGrid.Get())
 	{
 		float MeridianNum = AllottedGeometry.GetLocalSize().X/GridDensity.Get();
@@ -123,65 +125,55 @@ int32 SChartAxes::OnPaint(const FPaintArgs& Args,
 			AllottedGeometry.ToPaintGeometry(TextSize, FSlateLayoutTransform(TextPos)),
 			LabelText, TestFont, ESlateDrawEffect::None, FLinearColor::White);
 	}
-	//UE_LOG(LogTemp, Warning, TEXT("neo---SlateSize(x:%f, y:%f ; )"), AllottedGeometry.GetLocalSize().X, AllottedGeometry.GetLocalSize().Y);
-	//int32 YTickCount = FChartMath::GetNiceStep(BoundY.Get());
-	/*if (OriginLocation.X == 0 || OriginLocation.X == (AllottedGeometry.GetLocalSize().X / 2))
-	{*/
-		/*float PX = (AllottedGeometry.GetLocalSize().X - OriginLocation.X) / AxisLayout.Get().AxisX_TickStep;
-		for (int32 i = 1; i <= PositiveTicks; ++i)
-		{
-			TArray<FVector2D> TickPoints {FVector2D(OriginLocation.X + Step * i,OriginLocation.Y), FVector2D(OriginLocation.X + Step * i,OriginLocation.Y-8.0f)};
-			FSlateDrawElement::MakeLines(
-			OutDrawElements, LayerId, 
-			AllottedGeometry.ToPaintGeometry(), 
-			TickPoints, ESlateDrawEffect::None, 
-			AxisColor.Get(), true, AxisThickness.Get()/2);
 
-			// --- 绘制刻度数值 (Label) ---
-			// 格式化文字：如果是整数则不显示小数点
-			FString LabelText = (Step >= 1.0f) ? FString::FromInt(FMath::RoundToInt(i * Step)) : FString::Printf(TEXT("%.1f"), i * Step);
-			FSlateFontInfo TestFont = FCoreStyle::Get().GetFontStyle("NormalFont");
-			TestFont.Size = 10;
-			TSharedRef<FSlateFontMeasure> FontMeasureService = FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
-			FVector2D TextSize = FontMeasureService->Measure(LabelText, TestFont);
-        
-			// 计算右对齐位置
-			FVector2D TextPos = FVector2D(OriginLocation.X + Step * i ,OriginLocation.Y+8.0f) + FVector2D(-(TextSize.X/2), -TextSize.Y * 0.5f);
-			FSlateDrawElement::MakeText(
-				OutDrawElements, LayerId,
-				AllottedGeometry.ToPaintGeometry(TextSize, FSlateLayoutTransform(TextPos)),
-				LabelText, TestFont, ESlateDrawEffect::None, FLinearColor::White);
-		}*/
-	/*}*/
-	/*if (OriginLocation.X == AllottedGeometry.GetLocalSize().X || OriginLocation.X == (AllottedGeometry.GetLocalSize().X / 2))
+	/*float PixelStepY = (AllottedGeometry.GetLocalSize().X - OriginLocation.X) / CurAxisLayout.AxisX_OutPositiveTicks;
+	for (int32 i = 1; i <= CurAxisLayout.AxisY_OutPositiveTicks; ++i)
 	{
-		float PX =  OriginLocation.X ;
-		float Step = PX / XTickCount;
-		float TextStep = BoundX.Get() / XTickCount;
-		for (int32 i = 1; i <= XTickCount; ++i)
-		{
-			TArray<FVector2D> TickPoints {FVector2D(OriginLocation.X - Step * i,OriginLocation.Y), FVector2D(OriginLocation.X - Step * i,OriginLocation.Y-8.0f)};
-			FSlateDrawElement::MakeLines(
-			OutDrawElements, LayerId, 
-			AllottedGeometry.ToPaintGeometry(), 
-			TickPoints, ESlateDrawEffect::None, 
-			AxisColor.Get(), true, AxisThickness.Get()/2);
+		TArray<FVector2D> TickPoints {FVector2D(OriginLocation.X ,OriginLocation.Y - PixelStepY * i), FVector2D(OriginLocation.X + PixelStepY * i,OriginLocation.Y-8.0f)};
+		FSlateDrawElement::MakeLines(
+		OutDrawElements, LayerId, 
+		AllottedGeometry.ToPaintGeometry(), 
+		TickPoints, ESlateDrawEffect::None, 
+		AxisColor.Get(), true, AxisThickness.Get()/2);
 
-			// --- 绘制刻度数值 (Label) ---
-			// 格式化文字：如果是整数则不显示小数点
-			FString LabelText = (TextStep >= 1.0f) ? FString::FromInt(FMath::RoundToInt(-i * TextStep)) : FString::Printf(TEXT("%.1f"), -i * TextStep);
-			FSlateFontInfo TestFont = FCoreStyle::Get().GetFontStyle("NormalFont");
-			TestFont.Size = 10;
-			TSharedRef<FSlateFontMeasure> FontMeasureService = FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
-			FVector2D TextSize = FontMeasureService->Measure(LabelText, TestFont);
+		// --- 绘制刻度数值 (Label) ---
+		// 格式化文字：如果是整数则不显示小数点
+		FString LabelText = (CurAxisLayout.AxisY_TickStep >= 1.0f) ? FString::FromInt(FMath::RoundToInt(i * CurAxisLayout.AxisY_TickStep)) : FString::Printf(TEXT("%.1f"), i * CurAxisLayout.AxisY_TickStep);
+		FSlateFontInfo TestFont = FCoreStyle::Get().GetFontStyle("NormalFont");
+		TestFont.Size = 10;
+		TSharedRef<FSlateFontMeasure> FontMeasureService = FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
+		FVector2D TextSize = FontMeasureService->Measure(LabelText, TestFont);
         
-			// 计算右对齐位置
-			FVector2D TextPos = FVector2D(OriginLocation.X - Step * i ,OriginLocation.Y+8.0f) + FVector2D(-(TextSize.X/2), -TextSize.Y * 0.5f);
-			FSlateDrawElement::MakeText(
-				OutDrawElements, LayerId,
-				AllottedGeometry.ToPaintGeometry(TextSize, FSlateLayoutTransform(TextPos)),
-				LabelText, TestFont, ESlateDrawEffect::None, FLinearColor::White);
-		}
+		// 计算右对齐位置
+		FVector2D TextPos = FVector2D(OriginLocation.X + CurAxisLayout.AxisY_TickStep * i ,OriginLocation.Y+8.0f) + FVector2D(-(TextSize.X/2), -TextSize.Y * 0.5f);
+		FSlateDrawElement::MakeText(
+			OutDrawElements, LayerId,
+			AllottedGeometry.ToPaintGeometry(TextSize, FSlateLayoutTransform(TextPos)),
+			LabelText, TestFont, ESlateDrawEffect::None, FLinearColor::White);
+	}
+	for (int32 i = 1; i <= XTickCount; ++i)
+	{
+		TArray<FVector2D> TickPoints {FVector2D(OriginLocation.X - Step * i,OriginLocation.Y), FVector2D(OriginLocation.X - Step * i,OriginLocation.Y-8.0f)};
+		FSlateDrawElement::MakeLines(
+		OutDrawElements, LayerId, 
+		AllottedGeometry.ToPaintGeometry(), 
+		TickPoints, ESlateDrawEffect::None, 
+		AxisColor.Get(), true, AxisThickness.Get()/2);
+
+		// --- 绘制刻度数值 (Label) ---
+		// 格式化文字：如果是整数则不显示小数点
+		FString LabelText = (TextStep >= 1.0f) ? FString::FromInt(FMath::RoundToInt(-i * TextStep)) : FString::Printf(TEXT("%.1f"), -i * TextStep);
+		FSlateFontInfo TestFont = FCoreStyle::Get().GetFontStyle("NormalFont");
+		TestFont.Size = 10;
+		TSharedRef<FSlateFontMeasure> FontMeasureService = FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
+		FVector2D TextSize = FontMeasureService->Measure(LabelText, TestFont);
+        
+		// 计算右对齐位置
+		FVector2D TextPos = FVector2D(OriginLocation.X - Step * i ,OriginLocation.Y+8.0f) + FVector2D(-(TextSize.X/2), -TextSize.Y * 0.5f);
+		FSlateDrawElement::MakeText(
+			OutDrawElements, LayerId,
+			AllottedGeometry.ToPaintGeometry(TextSize, FSlateLayoutTransform(TextPos)),
+			LabelText, TestFont, ESlateDrawEffect::None, FLinearColor::White);
 	}*/
 	
 	//X轴
