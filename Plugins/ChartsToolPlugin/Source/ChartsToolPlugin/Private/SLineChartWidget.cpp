@@ -38,6 +38,7 @@ int32 SLineChartWidget::OnPaint(const FPaintArgs& Args, const FGeometry& Allotte
 	
 	
 	FAxisLayout AxisSettings = AxisLayout.Get() ;
+
 	
 
 	

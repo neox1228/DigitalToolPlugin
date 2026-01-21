@@ -68,33 +68,35 @@ public:
 	{
 		if (SeriesMap.Num() <= 0)
 		{
-			if (LineMap.Num() > 0)
+			for (auto& Elem : LineMap)
 			{
-				LineMap.Reset();
-				LineMap.Empty();
+				if (Elem.Value.IsValid())
+				{
+					LineChart->RemoveSlot(Elem.Value.ToSharedRef());
+				}
 			}
+
+			LineMap.Empty();
 			return;
 		}
+
 		TArray<FString> CurrentKeys;
 		LineMap.GenerateKeyArray(CurrentKeys);
+
 		for (auto& Key : CurrentKeys)
 		{
 			if (!SeriesMap.Contains(Key))
 			{
 				TSharedPtr<SLineChartWidget>* FoundPtr = LineMap.Find(Key);
-				if (FoundPtr->IsValid())
+				if (FoundPtr && FoundPtr->IsValid())
 				{
-					TSharedPtr<SLineChartWidget> LineToRemove = *FoundPtr;
-					LineChart->RemoveSlot(LineToRemove.ToSharedRef());
-					LineMap.Remove(Key);
+					LineChart->RemoveSlot((*FoundPtr).ToSharedRef());
 				}
+
+				LineMap.Remove(Key);
 			}
 		}
-		if (LineMap.Num() == 0 || LineMap.Num() > 10)
-		{
-			LineMap.Shrink();
-		}
-		
+
 		for (auto& Elem : SeriesMap)
 		{
 			const FString& SeriesName = Elem.Key;
@@ -103,41 +105,39 @@ public:
 			if (LineMap.Contains(SeriesName))
 			{
 				TSharedPtr<SLineChartWidget>* FoundPtr = LineMap.Find(SeriesName);
-				if (FoundPtr->IsValid())
+				if (FoundPtr && FoundPtr->IsValid())
 				{
-					TSharedPtr<SLineChartWidget> TempLine = *FoundPtr;
-					if (TempLine.IsValid())
-					{
-						TempLine->SetData(SeriesSetting.Data);
-						TempLine->SyncAxisLayout(AxisLayout);
-						TempLine->SyncSeriesSetting(Elem.Value);
-						TempLine->IsCanUpdateData(true);
-					}
+					auto Line = *FoundPtr;
+					Line->SetData(SeriesSetting.Data);
+					Line->SyncAxisLayout(AxisLayout);
+					Line->SyncSeriesSetting(SeriesSetting);
+					Line->IsCanUpdateData(true);
 				}
 			}
 			else
 			{
-				//创建新的折线 Slate 实例
-				TSharedRef<SLineChartWidget> NewLine = SNew(SLineChartWidget)
-				.Data(SeriesSetting.Data)
-				.LineColor(SeriesSetting.SeriesColor)
-				.LineThinckness(SeriesSetting.SeriesThinckness);
+				TSharedRef<SLineChartWidget> NewLine =
+					SNew(SLineChartWidget)
+					.Data(SeriesSetting.Data)
+					.LineColor(SeriesSetting.SeriesColor)
+					.LineThinckness(SeriesSetting.SeriesThinckness);
 
 				LineMap.Add(SeriesName, NewLine);
-		
-				// 将折线添加到叠层
+
 				LineChart->AddSlot()
-				.Padding(130.f,160.f, 80.f, 100.f)
+				.Padding(130.f,160.f,80.f,100.f)
 				[
 					NewLine
 				];
 			}
-		}	
-		
+		}
 	}
+
 	
 protected:
 	virtual TSharedRef<SWidget> RebuildWidget() override;
+
+
 	virtual void SynchronizeProperties() override;
 	virtual void ReleaseSlateResources(bool bReleaseChildren) override;
 

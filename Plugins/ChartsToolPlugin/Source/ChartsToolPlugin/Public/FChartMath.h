@@ -197,6 +197,23 @@ public:
 		);
 
 	/**
+	 * 绘制坐标刻度
+	 */
+	static void DrawAxisTicks(
+		FSlateWindowElementList& OutDrawElements,
+		int32 LayerId,
+		const FGeometry& AllottedGeometry,
+		const FVector2D& Origin,
+		float PixelStep,
+		float TickStep,
+		int32 TickCount,
+		bool bIsXAxis,
+		bool bIsNegative,
+		float AxisThickness,
+		FSlateFontInfo TickFont,
+		FLinearColor AxisColor = FLinearColor::White);
+
+	/**
 	 * 根据传入数据轴区间，计算坐标系轴区间，正负轴刻度数量和步长
 	 * @param AxisMaxValue 数据轴最大值
 	 * @param AxisMinValue 数据轴最小值

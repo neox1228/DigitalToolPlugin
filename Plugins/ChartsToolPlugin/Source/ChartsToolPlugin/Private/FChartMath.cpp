@@ -2,7 +2,7 @@
 
 
 #include "FChartMath.h"
-
+#include "Fonts/FontMeasure.h"
 
 void FChartMath::GetArrayRange(const TArray<FVector2D>& DataArray, float& OutMaxX, float& OutMaxY, EValue Option)
 {
@@ -225,8 +225,63 @@ float FChartMath::GetNiceStep(float MaxValue, int32 MaxTicks)
 	return SelectedStepSeed * Magnitude;
 }
 
+void FChartMath::DrawAxisTicks(FSlateWindowElementList& OutDrawElements, int32 LayerId,
+	const FGeometry& AllottedGeometry, const FVector2D& Origin, float PixelStep, float TickStep, int32 TickCount,
+	bool bIsXAxis, bool bIsNegative,  float AxisThickness, FSlateFontInfo TickFont, FLinearColor AxisColor)
+{
+	if (TickCount <= 0) return;
+
+    // 1. 预取字体服务和配置
+    const TSharedRef<FSlateFontMeasure> FontMeasureService = FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
+    FSlateFontInfo LabelFont = TickFont;
+    LabelFont.Size = 10;
+
+    // 2. 确定方向系数
+    float DirectionSign = bIsNegative ? -1.0f : 1.0f;
+
+    for (int32 i = 1; i <= TickCount; ++i)
+    {
+        // 计算当前刻度的像素位置
+        float Offset = PixelStep * i * DirectionSign;
+        FVector2D TickBasePos = bIsXAxis ? FVector2D(Origin.X + Offset, Origin.Y) : FVector2D(Origin.X, Origin.Y - Offset);
+        
+        // --- 绘制刻度线 ---
+        // X轴刻度向下(或上)延伸，Y轴刻度向右延伸
+        FVector2D TickEndPos = bIsXAxis ? FVector2D(TickBasePos.X, TickBasePos.Y - 8.0f) : FVector2D(TickBasePos.X + 8.0f, TickBasePos.Y);
+        
+        TArray<FVector2D> TickPoints { TickBasePos, TickEndPos };
+        FSlateDrawElement::MakeLines(
+            OutDrawElements, LayerId,
+            AllottedGeometry.ToPaintGeometry(),
+            TickPoints, ESlateDrawEffect::None,
+            AxisColor, true, AxisThickness / 2.0f);
+
+        // --- 绘制标签文字 ---
+        float Value = i * TickStep * DirectionSign;
+        FString LabelText = (TickStep >= 1.0f) ? FString::FromInt(FMath::RoundToInt(Value)) : FString::Printf(TEXT("%.1f"), Value);
+        FVector2D TextSize = FontMeasureService->Measure(LabelText, LabelFont);
+
+        FVector2D TextPos;
+        if (bIsXAxis)
+        {
+            // X轴文字：刻度下方居中
+            TextPos = FVector2D(TickBasePos.X - (TextSize.X * 0.5f), Origin.Y + 8.0f);
+        }
+        else
+        {
+            // Y轴文字：刻度左侧居中
+            TextPos = FVector2D(Origin.X - 25.0f - (TextSize.X * 0.5f), TickBasePos.Y - (TextSize.Y * 0.5f));
+        }
+
+        FSlateDrawElement::MakeText(
+            OutDrawElements, LayerId,
+            AllottedGeometry.ToPaintGeometry(TextSize, FSlateLayoutTransform(TextPos)),
+            LabelText, LabelFont, ESlateDrawEffect::None, AxisColor);
+    }
+}
+
 void FChartMath::CalculateAsymmetricAxisLayout(float& AxisMaxValue, float& AxisMinValue, int32& OutPositiveTicks,
-	int32& OutNegativeTicks, float& OutStep, int32 MaxTicks)
+                                               int32& OutNegativeTicks, float& OutStep, int32 MaxTicks)
 {
 	// 1. 以绝对值最大的一侧作为步长基准
 	float MajorValue = FMath::Max(FMath::Abs(AxisMaxValue), FMath::Abs(AxisMinValue));
@@ -238,7 +293,7 @@ void FChartMath::CalculateAsymmetricAxisLayout(float& AxisMaxValue, float& AxisM
 	// 3. 根据全局步长，分别计算正负轴需要的刻度数量
 	OutPositiveTicks = (AxisMaxValue > 0) ? FMath::CeilToInt(AxisMaxValue / OutStep) : 0;
 	OutNegativeTicks = (AxisMinValue < 0) ? FMath::CeilToInt(FMath::Abs(AxisMinValue) / OutStep) : 0;
-	//UE_LOG(LogTemp, Warning, TEXT("neo---正半轴刻度数：%f; 负半轴刻度数： %f"), OutPositiveTicks, OutNegativeTicks);
+	//UE_LOG(LogTemp, Warning, TEXT("neo---AxisMax: %f ; AxisMin: %f ; 正半轴刻度数：%d ; 负半轴刻度数： %d"),AxisMaxValue, AxisMinValue, OutPositiveTicks, OutNegativeTicks);
 
 
 	// 4. 特殊处理：如果某个半轴过小保留一个刻度范围
