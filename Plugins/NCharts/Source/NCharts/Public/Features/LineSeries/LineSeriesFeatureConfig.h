@@ -20,6 +20,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NCharts|LineSeries")
 	TArray<FVector2D> Points;
+	//TMap<FString, TArray<FVector2D>> Points;
+	
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NCharts|LineSeries")
 	FVector2D Padding = FVector2D(16.0f, 12.0f);

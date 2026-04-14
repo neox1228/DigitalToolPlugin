@@ -1,5 +1,7 @@
 #include "Features/LineSeries/LineSeriesProxy.h"
 
+#include "Core/NChartMathLib.h"
+
 TSharedRef<FLineSeriesProxy> FLineSeriesProxy::CreateDemo()
 {
 	TSharedRef<FLineSeriesProxy> Proxy = MakeShared<FLineSeriesProxy>();
@@ -31,6 +33,7 @@ FLineSeriesProxy::FOnStateChanged& FLineSeriesProxy::OnStateChanged()
 void FLineSeriesProxy::SetPoints(const TArray<FVector2D>& InPoints)
 {
 	State.Points = InPoints;
+	NChartMathLib::SortPointsByX(State.Points);
 	UpdateDerivedState();
 	StateChanged.Broadcast();
 }

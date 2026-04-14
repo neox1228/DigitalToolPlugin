@@ -210,7 +210,7 @@ FReply STooltipWidget::OnMouseMove(const FGeometry& MyGeometry, const FPointerEv
 	const FVector2D LocalMousePosition = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
 	if (!UpdateHoverState(MyGeometry, LocalMousePosition))
 	{
-		return FReply::Handled();
+		return FReply::Unhandled();
 	}
 
 	Invalidate(EInvalidateWidgetReason::Paint);

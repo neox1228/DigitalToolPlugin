@@ -1,10 +1,10 @@
 #include "Widgets/LineChartWidget.h"
 
+#include "Algo/Sort.h"
 #include "Core/NChartRegistry.h"
 #include "Features/AxisX/AxisXProxy.h"
 #include "Features/AxisY/AxisYProxy.h"
 #include "Features/LineSeries/LineSeriesProxy.h"
-#include "Features/Tooltip/TooltipProxy.h"
 #include "Features/LineSeries/LineSeriesFeatureConfig.h"
 #include "Widgets/SOverlay.h"
 #include "Widgets/SNullWidget.h"
@@ -36,16 +36,21 @@ ULineChartWidget::ULineChartWidget()
 
 TSharedRef<SWidget> ULineChartWidget::RebuildWidget()
 {
+	LiveFeatureProxies.Reset();
 	AxisXProxy.Reset();
 	AxisYProxy.Reset();
 	LineProxy.Reset();
-	TooltipProxy.Reset();
 
 	SyncFeatureEntries();
 
 	const FNChartRegistry& Registry = FNChartRegistry::Get();
 	const TSharedRef<SOverlay> RootOverlay = SNew(SOverlay);
-	TSharedPtr<SWidget> DeferredTooltipWidget;
+	struct FLayeredWidget
+	{
+		int32 LayerOrder = 0;
+		TSharedPtr<SWidget> Widget;
+	};
+	TArray<FLayeredWidget> LayeredWidgets;
 
 	for (FNChartFeatureEntry& Entry : Features)
 	{
@@ -71,6 +76,8 @@ TSharedRef<SWidget> ULineChartWidget::RebuildWidget()
 			Config->ApplyToProxy(BaseProxy.ToSharedRef());
 		}
 
+		LiveFeatureProxies.Add(Entry.FeatureType, BaseProxy);
+
 		if (Entry.FeatureType == EChartFeatureType::AxisX)
 		{
 			AxisXProxy = StaticCastSharedPtr<FAxisXProxy>(BaseProxy);
@@ -83,10 +90,6 @@ TSharedRef<SWidget> ULineChartWidget::RebuildWidget()
 		{
 			LineProxy = StaticCastSharedPtr<FLineSeriesProxy>(BaseProxy);
 		}
-		else if (Entry.FeatureType == EChartFeatureType::Tooltip)
-		{
-			TooltipProxy = StaticCastSharedPtr<FTooltipProxy>(BaseProxy);
-		}
 
 		TSharedPtr<SWidget> FeatureWidget = Registry.CreateWidget(Descriptor.FeatureName, BaseProxy.ToSharedRef());
 		if (!FeatureWidget.IsValid())
@@ -94,9 +97,20 @@ TSharedRef<SWidget> ULineChartWidget::RebuildWidget()
 			FeatureWidget = SNullWidget::NullWidget;
 		}
 
-		if (Entry.FeatureType == EChartFeatureType::Tooltip)
+		FLayeredWidget& Layered = LayeredWidgets.AddDefaulted_GetRef();
+		Layered.LayerOrder = Descriptor.LayerOrder;
+		Layered.Widget = FeatureWidget;
+	}
+
+	Algo::Sort(LayeredWidgets, [](const FLayeredWidget& A, const FLayeredWidget& B)
+	{
+		return A.LayerOrder < B.LayerOrder;
+	});
+
+	for (const FLayeredWidget& Layered : LayeredWidgets)
+	{
+		if (!Layered.Widget.IsValid())
 		{
-			DeferredTooltipWidget = FeatureWidget;
 			continue;
 		}
 
@@ -104,24 +118,11 @@ TSharedRef<SWidget> ULineChartWidget::RebuildWidget()
 		.HAlign(HAlign_Fill)
 		.VAlign(VAlign_Fill)
 		[
-			FeatureWidget.ToSharedRef()
+			Layered.Widget.ToSharedRef()
 		];
 	}
 
-	if (DeferredTooltipWidget.IsValid())
-	{
-		RootOverlay->AddSlot()
-		.HAlign(HAlign_Fill)
-		.VAlign(VAlign_Fill)
-		[
-			DeferredTooltipWidget.ToSharedRef()
-		];
-	}
-
-	if (TooltipProxy.IsValid())
-	{
-		TooltipProxy->SetTargetLineProxy(LineProxy);
-	}
+	Registry.ApplyPostBuildLinks(LiveFeatureProxies);
 
 	return RootOverlay;
 }
@@ -129,10 +130,10 @@ TSharedRef<SWidget> ULineChartWidget::RebuildWidget()
 void ULineChartWidget::ReleaseSlateResources(bool bReleaseChildren)
 {
 	Super::ReleaseSlateResources(bReleaseChildren);
+	LiveFeatureProxies.Reset();
 	AxisXProxy.Reset();
 	AxisYProxy.Reset();
 	LineProxy.Reset();
-	TooltipProxy.Reset();
 }
 
 void ULineChartWidget::SetPoints(const TArray<FVector2D>& InPoints)
@@ -235,26 +236,12 @@ void ULineChartWidget::ApplyFeatureEntriesToLiveProxies()
 			continue;
 		}
 
-		if (Entry.FeatureType == EChartFeatureType::AxisX && AxisXProxy.IsValid())
+		const TSharedPtr<INChartProxy>* ProxyPtr = LiveFeatureProxies.Find(Entry.FeatureType);
+		if (ProxyPtr && ProxyPtr->IsValid())
 		{
-			Entry.Config->ApplyToProxy(AxisXProxy.ToSharedRef());
-		}
-		else if (Entry.FeatureType == EChartFeatureType::AxisY && AxisYProxy.IsValid())
-		{
-			Entry.Config->ApplyToProxy(AxisYProxy.ToSharedRef());
-		}
-		else if (Entry.FeatureType == EChartFeatureType::LineSeries && LineProxy.IsValid())
-		{
-			Entry.Config->ApplyToProxy(LineProxy.ToSharedRef());
-		}
-		else if (Entry.FeatureType == EChartFeatureType::Tooltip && TooltipProxy.IsValid())
-		{
-			Entry.Config->ApplyToProxy(TooltipProxy.ToSharedRef());
+			Entry.Config->ApplyToProxy(ProxyPtr->ToSharedRef());
 		}
 	}
 
-	if (TooltipProxy.IsValid())
-	{
-		TooltipProxy->SetTargetLineProxy(LineProxy);
-	}
+	FNChartRegistry::Get().ApplyPostBuildLinks(LiveFeatureProxies);
 }

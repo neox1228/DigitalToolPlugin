@@ -30,8 +30,10 @@ void FNChartRegistry::RegisterFeature(const FNChartFeatureDescriptor& Descriptor
 	Entry.FeatureName = Descriptor.FeatureName;
 	Entry.DisplayName = Descriptor.DisplayName;
 	Entry.ConfigClass = Descriptor.ConfigClass;
+	Entry.LayerOrder = Descriptor.LayerOrder;
 	Entry.ProxyFactory = Descriptor.ProxyFactory;
 	Entry.WidgetFactory = Descriptor.WidgetFactory;
+	Entry.PostBuildLink = Descriptor.PostBuildLink;
 
 	Features.Add(Descriptor.FeatureName, MoveTemp(Entry));
 	FeatureTypeToName.Add(Descriptor.Type, Descriptor.FeatureName);
@@ -77,6 +79,18 @@ TSharedPtr<SWidget> FNChartRegistry::CreateWidget(FName FeatureName, const TShar
 	return nullptr;
 }
 
+void FNChartRegistry::ApplyPostBuildLinks(const TMap<EChartFeatureType, TSharedPtr<INChartProxy>>& FeatureProxies) const
+{
+	for (const TPair<FName, FFeatureEntry>& Pair : Features)
+	{
+		const FFeatureEntry& Entry = Pair.Value;
+		if (Entry.PostBuildLink)
+		{
+			Entry.PostBuildLink(FeatureProxies);
+		}
+	}
+}
+
 TArray<FName> FNChartRegistry::GetFeatureNames() const
 {
 	TArray<FName> Names;
@@ -113,7 +127,9 @@ bool FNChartRegistry::GetFeatureDescriptorByName(FName FeatureName, FNChartFeatu
 	OutDescriptor.FeatureName = Entry->FeatureName;
 	OutDescriptor.DisplayName = Entry->DisplayName;
 	OutDescriptor.ConfigClass = Entry->ConfigClass;
+	OutDescriptor.LayerOrder = Entry->LayerOrder;
 	OutDescriptor.ProxyFactory = Entry->ProxyFactory;
 	OutDescriptor.WidgetFactory = Entry->WidgetFactory;
+	OutDescriptor.PostBuildLink = Entry->PostBuildLink;
 	return true;
 }

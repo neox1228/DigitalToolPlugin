@@ -12,7 +12,8 @@ enum class EChartFeatureType : uint8
 	AxisX UMETA(DisplayName = "Axis X"),
 	AxisY UMETA(DisplayName = "Axis Y"),
 	LineSeries UMETA(DisplayName = "Line Series"),
-	Tooltip UMETA(DisplayName = "Tooltip")
+	Tooltip UMETA(DisplayName = "Tooltip"),
+	PointBubbles UMETA(DisplayName = "Point Bubbles")
 };
 
 UCLASS(Abstract, BlueprintType, EditInlineNew, DefaultToInstanced)

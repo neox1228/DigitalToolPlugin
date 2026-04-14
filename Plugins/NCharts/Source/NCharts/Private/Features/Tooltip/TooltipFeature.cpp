@@ -1,5 +1,7 @@
 #include "Features/Tooltip/TooltipFeatureConfig.h"
+
 #include "Core/NChartRegistry.h"
+#include "Features/LineSeries/LineSeriesProxy.h"
 #include "Features/Tooltip/TooltipProxy.h"
 #include "Features/Tooltip/TooltipWidget.h"
 
@@ -16,6 +18,7 @@ namespace
 			Descriptor.FeatureName = TooltipFeatureName;
 			Descriptor.DisplayName = FText::FromString(TEXT("Tooltip"));
 			Descriptor.ConfigClass = UTooltipFeatureConfig::StaticClass();
+			Descriptor.LayerOrder = 100;
 			Descriptor.ProxyFactory = []()
 			{
 				return StaticCastSharedRef<INChartProxy>(MakeShared<FTooltipProxy>());
@@ -24,6 +27,27 @@ namespace
 			{
 				const TSharedRef<FTooltipProxy> Proxy = StaticCastSharedRef<FTooltipProxy>(InProxy);
 				return StaticCastSharedRef<SWidget>(SNew(STooltipWidget).Proxy(Proxy));
+			};
+			Descriptor.PostBuildLink = [](const TMap<EChartFeatureType, TSharedPtr<INChartProxy>>& FeatureProxies)
+			{
+				const TSharedPtr<INChartProxy>* TooltipBase = FeatureProxies.Find(EChartFeatureType::Tooltip);
+				if (!TooltipBase || !TooltipBase->IsValid())
+				{
+					return;
+				}
+
+				const TSharedPtr<INChartProxy>* LineBase = FeatureProxies.Find(EChartFeatureType::LineSeries);
+				TSharedPtr<FLineSeriesProxy> LineProxy;
+				if (LineBase && LineBase->IsValid())
+				{
+					LineProxy = StaticCastSharedPtr<FLineSeriesProxy>(*LineBase);
+				}
+
+				const TSharedPtr<FTooltipProxy> TooltipProxy = StaticCastSharedPtr<FTooltipProxy>(*TooltipBase);
+				if (TooltipProxy.IsValid())
+				{
+					TooltipProxy->SetTargetLineProxy(LineProxy);
+				}
 			};
 			FNChartRegistry::Get().RegisterFeature(Descriptor);
 		}

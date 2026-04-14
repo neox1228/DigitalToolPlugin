@@ -75,7 +75,7 @@ int32 SLineSeriesWidget::OnPaint(
 		AllottedGeometry.ToPaintGeometry(),
 		LinePoints,
 		ESlateDrawEffect::None,
-		State.ActiveLineColor,
+		State.BaseLineColor,
 		true,
 		State.LineThickness);
 
