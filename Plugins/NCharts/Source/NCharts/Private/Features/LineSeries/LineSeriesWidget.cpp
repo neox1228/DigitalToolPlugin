@@ -32,9 +32,15 @@ int32 SLineSeriesWidget::OnPaint(
 	const FWidgetStyle& InWidgetStyle,
 	bool bParentEnabled) const
 {
+	// 通过Proxy获取对应State
 	const FLineSeriesState& State = Proxy->GetState();
+	// 获取当前绘制层整体大小
 	const FVector2D Size = FVector2D(AllottedGeometry.GetLocalSize());
+	
+	// 获取当前绘制 padding
 	const FVector2D Padding = State.Padding;
+	
+	//通过padding计算绘制的最大值和最小值点
 	const FVector2D DrawMin = Padding;
 	const FVector2D DrawMax = FVector2D(Size.X - Padding.X, Size.Y - Padding.Y);
 

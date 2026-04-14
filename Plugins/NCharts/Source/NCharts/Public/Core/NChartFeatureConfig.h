@@ -7,6 +7,13 @@
 class INChartProxy;
 
 UENUM(BlueprintType)
+enum class EAxisType : uint8
+{
+	Category UMETA(DisplayName = "Category"),
+	Value UMETA(DisplayName = "Value")
+};
+
+UENUM(BlueprintType)
 enum class EChartFeatureType : uint8
 {
 	AxisX UMETA(DisplayName = "Axis X"),

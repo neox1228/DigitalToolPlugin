@@ -10,7 +10,7 @@
 
 namespace
 {
-	bool FindNearestPoint(
+	bool FindNearestBubblePoint(
 		const TArray<FVector2D>& ScreenPoints,
 		const FVector2D& MousePosition,
 		int32& OutIndex,
@@ -184,7 +184,7 @@ bool SPointBubblesWidget::UpdateHoverState(const FGeometry& MyGeometry, const FV
 
 	int32 HoverIndex = INDEX_NONE;
 	float BestDistanceSquared = 0.0f;
-	if (!FindNearestPoint(ScreenPoints, LocalMousePosition, HoverIndex, BestDistanceSquared) || !State.Points.IsValidIndex(HoverIndex))
+	if (!FindNearestBubblePoint(ScreenPoints, LocalMousePosition, HoverIndex, BestDistanceSquared) || !State.Points.IsValidIndex(HoverIndex))
 	{
 		ClearHoverState();
 		return false;
