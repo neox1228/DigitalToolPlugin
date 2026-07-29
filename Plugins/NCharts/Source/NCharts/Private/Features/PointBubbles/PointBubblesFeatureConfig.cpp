@@ -1,3 +1,6 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+// UPointBubblesFeatureConfig 实现
+
 #include "Features/PointBubbles/PointBubblesFeatureConfig.h"
 
 #include "Features/PointBubbles/PointBubblesProxy.h"

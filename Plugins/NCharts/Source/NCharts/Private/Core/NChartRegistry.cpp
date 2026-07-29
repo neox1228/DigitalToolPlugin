@@ -1,9 +1,13 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+// FNChartRegistry 实现：Feature 注册表的增删查与工厂方法
+
 #include "Core/NChartRegistry.h"
 
 #include "Widgets/SWidget.h"
 
 FNChartRegistry& FNChartRegistry::Get()
 {
+	// 函数内静态变量，保证全局唯一且延迟初始化
 	static FNChartRegistry Registry;
 	return Registry;
 }
@@ -20,6 +24,7 @@ void FNChartRegistry::RegisterFeature(FName FeatureName, FProxyFactory ProxyFact
 
 void FNChartRegistry::RegisterFeature(const FNChartFeatureDescriptor& Descriptor)
 {
+	// 名称和工厂函数为必填项，缺少则拒绝注册
 	if (Descriptor.FeatureName.IsNone() || !Descriptor.ProxyFactory || !Descriptor.WidgetFactory)
 	{
 		return;
@@ -81,6 +86,7 @@ TSharedPtr<SWidget> FNChartRegistry::CreateWidget(FName FeatureName, const TShar
 
 void FNChartRegistry::ApplyPostBuildLinks(const TMap<EChartFeatureType, TSharedPtr<INChartProxy>>& FeatureProxies) const
 {
+	// 遍历所有已注册 Feature，依次执行其 PostBuildLink（若已设置）
 	for (const TPair<FName, FFeatureEntry>& Pair : Features)
 	{
 		const FFeatureEntry& Entry = Pair.Value;

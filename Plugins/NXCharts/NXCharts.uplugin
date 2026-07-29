@@ -1,0 +1,23 @@
+﻿{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "NXCharts",
+	"Description": "V0.1",
+	"Category": "Other",
+	"CreatedBy": "Neo",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "NXCharts",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}

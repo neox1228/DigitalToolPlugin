@@ -1,3 +1,6 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+// PointBubbles Feature 静态注册器
+
 #include "Features/PointBubbles/PointBubblesFeatureConfig.h"
 
 #include "Core/NChartRegistry.h"

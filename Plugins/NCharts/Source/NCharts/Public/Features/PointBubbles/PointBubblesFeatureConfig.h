@@ -1,9 +1,17 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Core/NChartFeatureConfig.h"
 #include "PointBubblesFeatureConfig.generated.h"
 
+/**
+ * UPointBubblesFeatureConfig —— 气泡点标注编辑器/蓝图配置
+ *
+ * 已注册到 Registry，但默认 ULineChartWidget 未包含此 Feature，
+ * 需手动向 Features 数组添加 EChartFeatureType::PointBubbles 条目。
+ */
 UCLASS(BlueprintType, EditInlineNew, DefaultToInstanced)
 class NCHARTS_API UPointBubblesFeatureConfig : public UNChartFeatureConfigBase
 {

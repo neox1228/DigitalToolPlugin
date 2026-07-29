@@ -1,5 +1,9 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+
 #include "Features/LineSeries/LineSeriesWidget.h"
 
+#include "Core/NChartCartesianScale.h"
+#include "Core/NChartLayoutUtils.h"
 #include "Features/LineSeries/LineSeriesProxy.h"
 #include "Features/LineSeries/LineSeriesState.h"
 #include "Rendering/DrawElements.h"
@@ -32,47 +36,29 @@ int32 SLineSeriesWidget::OnPaint(
 	const FWidgetStyle& InWidgetStyle,
 	bool bParentEnabled) const
 {
-	// 通过Proxy获取对应State
 	const FLineSeriesState& State = Proxy->GetState();
-	// 获取当前绘制层整体大小
 	const FVector2D Size = FVector2D(AllottedGeometry.GetLocalSize());
-	
-	// 获取当前绘制 padding
-	const FVector2D Padding = State.Padding;
-	
-	//通过padding计算绘制的最大值和最小值点
-	const FVector2D DrawMin = Padding;
-	const FVector2D DrawMax = FVector2D(Size.X - Padding.X, Size.Y - Padding.Y);
 
 	if (State.Points.Num() < 2)
 	{
 		return LayerId;
 	}
 
-	FVector2D Min(FLT_MAX, FLT_MAX);
-	FVector2D Max(-FLT_MAX, -FLT_MAX);
-	for (const FVector2D& Point : State.Points)
-	{
-		Min.X = FMath::Min(Min.X, Point.X);
-		Min.Y = FMath::Min(Min.Y, Point.Y);
-		Max.X = FMath::Max(Max.X, Point.X);
-		Max.Y = FMath::Max(Max.Y, Point.Y);
-	}
-
-	const float RangeX = FMath::Max(Max.X - Min.X, 1.0f);
-	const float RangeY = FMath::Max(Max.Y - Min.Y, 1.0f);
-	const FVector2D DrawSize = FVector2D(DrawMax.X - DrawMin.X, DrawMax.Y - DrawMin.Y);
-
 	TArray<FVector2D> LinePoints;
-	LinePoints.Reserve(State.Points.Num());
-	for (const FVector2D& Point : State.Points)
+	const TSharedPtr<FNChartCartesianScale> Scale = Proxy->GetCartesianScale();
+	if (Scale.IsValid())
 	{
-		const float NormalX = (Point.X - Min.X) / RangeX;
-		const float NormalY = (Point.Y - Min.Y) / RangeY;
-
-		const float X = DrawMin.X + NormalX * DrawSize.X;
-		const float Y = DrawMax.Y - NormalY * DrawSize.Y;
-		LinePoints.Add(FVector2D(X, Y));
+		Scale->UpdatePixelRect(Scale->Padding, Size);
+		Scale->BuildScreenPoints(State.Points, LinePoints);
+	}
+	else
+	{
+		FNChartScreenLayout Layout;
+		if (!FNChartLayoutUtils::BuildScreenLayout(State.Points, State.Padding, Size, 2, Layout))
+		{
+			return LayerId;
+		}
+		LinePoints = Layout.ScreenPoints;
 	}
 
 	FSlateDrawElement::MakeLines(
@@ -81,7 +67,7 @@ int32 SLineSeriesWidget::OnPaint(
 		AllottedGeometry.ToPaintGeometry(),
 		LinePoints,
 		ESlateDrawEffect::None,
-		State.BaseLineColor,
+		State.ActiveLineColor,
 		true,
 		State.LineThickness);
 

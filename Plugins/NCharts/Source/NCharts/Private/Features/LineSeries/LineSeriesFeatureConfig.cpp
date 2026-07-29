@@ -1,9 +1,13 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+// ULineSeriesFeatureConfig 实现
+
 #include "Features/LineSeries/LineSeriesFeatureConfig.h"
 
 #include "Features/LineSeries/LineSeriesProxy.h"
 
 ULineSeriesFeatureConfig::ULineSeriesFeatureConfig()
 {
+	// 构造函数中预置演示数据，编辑器中打开即可预览
 	Points.Add(FVector2D(0.0, 10.0));
 	Points.Add(FVector2D(1.0, 18.0));
 	Points.Add(FVector2D(2.0, 12.0));

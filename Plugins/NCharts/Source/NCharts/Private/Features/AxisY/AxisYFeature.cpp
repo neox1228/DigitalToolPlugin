@@ -1,3 +1,6 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+// AxisY Feature 静态注册器
+
 #include "Features/AxisY/AxisYFeatureConfig.h"
 #include "Core/NChartRegistry.h"
 #include "Features/AxisY/AxisYProxy.h"

@@ -1,3 +1,5 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -5,6 +7,11 @@
 
 class FAxisYProxy;
 
+/**
+ * SAxisYWidget —— Y 轴 Slate 绘制控件
+ *
+ * 在 OnPaint 中自绘左侧垂直轴线。
+ */
 class NCHARTS_API SAxisYWidget : public SLeafWidget
 {
 public:

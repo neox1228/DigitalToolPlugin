@@ -1,4 +1,10 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+// SPointBubblesWidget 实现：散点圆绘制、Hover 呼吸动画与气泡提示
+
 #include "Features/PointBubbles/PointBubblesWidget.h"
+
+#include "Core/NChartCartesianScale.h"
+#include "Core/NChartLayoutUtils.h"
 
 #include "Features/PointBubbles/PointBubblesProxy.h"
 #include "Features/PointBubbles/PointBubblesState.h"
@@ -10,6 +16,7 @@
 
 namespace
 {
+	/** 在屏幕坐标点集中查找距离鼠标最近的点 */
 	bool FindNearestBubblePoint(
 		const TArray<FVector2D>& ScreenPoints,
 		const FVector2D& MousePosition,
@@ -78,12 +85,14 @@ int32 SPointBubblesWidget::OnPaint(
 		return LayerId;
 	}
 
+	// Hover 时计算呼吸动画偏移量（正弦波）
 	const double TimeSeconds = FPlatformTime::Seconds();
 	const bool bAnimateHover = State.bHasHover && State.HoveredIndex != INDEX_NONE;
 	const float Breath = bAnimateHover
 		? FMath::Sin(static_cast<float>(TimeSeconds) * State.BreathSpeed) * State.BreathAmplitude
 		: 0.0f;
 
+	// 绘制所有散点圆
 	for (int32 Index = 0; Index < ScreenPoints.Num(); ++Index)
 	{
 		const bool bHovered = bAnimateHover && Index == State.HoveredIndex;
@@ -92,6 +101,7 @@ int32 SPointBubblesWidget::OnPaint(
 		DrawCircle(AllottedGeometry, OutDrawElements, LayerId + 1, ScreenPoints[Index], Radius, Color);
 	}
 
+	// Hover 时绘制数值气泡
 	if (bAnimateHover && State.Points.IsValidIndex(State.HoveredIndex))
 	{
 		const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush("WhiteBrush");
@@ -168,6 +178,7 @@ EActiveTimerReturnType SPointBubblesWidget::HandleBreathTick(double InCurrentTim
 		return EActiveTimerReturnType::Stop;
 	}
 
+	// 持续触发重绘以更新呼吸动画帧
 	Invalidate(EInvalidateWidgetReason::Paint);
 	return EActiveTimerReturnType::Continue;
 }
@@ -198,6 +209,7 @@ bool SPointBubblesWidget::UpdateHoverState(const FGeometry& MyGeometry, const FV
 
 	Proxy->SetHoverState(HoverIndex, State.Points[HoverIndex], ScreenPoints[HoverIndex]);
 
+	// 启动呼吸动画定时器
 	if (!BreathTimerHandle.IsValid())
 	{
 		BreathTimerHandle = RegisterActiveTimer(0.0f, FWidgetActiveTimerDelegate::CreateSP(this, &SPointBubblesWidget::HandleBreathTick));
@@ -230,39 +242,21 @@ bool SPointBubblesWidget::BuildLayout(const FVector2D& GeometrySize, TArray<FVec
 		return false;
 	}
 
-	const FVector2D DrawMin = State.Padding;
-	const FVector2D DrawMax = FVector2D(GeometrySize.X - State.Padding.X, GeometrySize.Y - State.Padding.Y);
-	const FVector2D DrawSize = DrawMax - DrawMin;
-	if (DrawSize.X <= 1.0f || DrawSize.Y <= 1.0f)
+	const TSharedPtr<FNChartCartesianScale> Scale = Proxy->GetCartesianScale();
+	if (Scale.IsValid())
+	{
+		Scale->UpdatePixelRect(Scale->Padding, GeometrySize);
+		Scale->BuildScreenPoints(State.Points, OutScreenPoints);
+		return OutScreenPoints.Num() > 0;
+	}
+
+	FNChartScreenLayout Layout;
+	if (!FNChartLayoutUtils::BuildScreenLayout(State.Points, State.Padding, GeometrySize, 1, Layout))
 	{
 		return false;
 	}
 
-	FVector2D Min(FLT_MAX, FLT_MAX);
-	FVector2D Max(-FLT_MAX, -FLT_MAX);
-	for (const FVector2D& Point : State.Points)
-	{
-		Min.X = FMath::Min(Min.X, Point.X);
-		Min.Y = FMath::Min(Min.Y, Point.Y);
-		Max.X = FMath::Max(Max.X, Point.X);
-		Max.Y = FMath::Max(Max.Y, Point.Y);
-	}
-
-	const float RangeX = FMath::Max(Max.X - Min.X, 1.0f);
-	const float RangeY = FMath::Max(Max.Y - Min.Y, 1.0f);
-
-	OutScreenPoints.Reset();
-	OutScreenPoints.Reserve(State.Points.Num());
-
-	for (const FVector2D& Point : State.Points)
-	{
-		const float NormalX = (Point.X - Min.X) / RangeX;
-		const float NormalY = (Point.Y - Min.Y) / RangeY;
-		OutScreenPoints.Add(FVector2D(
-			DrawMin.X + NormalX * DrawSize.X,
-			DrawMax.Y - NormalY * DrawSize.Y));
-	}
-
+	OutScreenPoints = Layout.ScreenPoints;
 	return true;
 }
 
@@ -274,6 +268,7 @@ void SPointBubblesWidget::DrawCircle(
 	float Radius,
 	const FLinearColor& Color) const
 {
+	// 使用多层同心圆环线段填充，近似绘制实心圆
 	const int32 SegmentCount = 20;
 	for (float FillRadius = FMath::Max(1.0f, Radius); FillRadius >= 1.0f; FillRadius -= 1.0f)
 	{

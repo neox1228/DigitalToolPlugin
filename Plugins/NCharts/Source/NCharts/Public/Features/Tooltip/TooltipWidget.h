@@ -1,3 +1,5 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -5,7 +7,6 @@
 #include "Widgets/SLeafWidget.h"
 
 struct FPointerEvent;
-class FLineSeriesProxy;
 class FTooltipProxy;
 
 class NCHARTS_API STooltipWidget : public SLeafWidget
@@ -34,6 +35,8 @@ public:
 private:
 	void HandleStateChanged();
 	bool UpdateHoverState(const FGeometry& MyGeometry, const FVector2D& LocalMousePosition);
+	bool UpdateItemHoverState(const FVector2D& GeometrySize, const FVector2D& LocalMousePosition, float ActivationDistSq);
+	bool UpdateAxisHoverState(const FVector2D& GeometrySize, const FVector2D& LocalMousePosition);
 	void ClearHoverState();
 
 	TSharedPtr<FTooltipProxy> Proxy;

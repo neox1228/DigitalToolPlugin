@@ -1,3 +1,5 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+
 #include "Features/AxisY/AxisYFeatureConfig.h"
 
 #include "Features/AxisY/AxisYProxy.h"
@@ -13,4 +15,6 @@ void UAxisYFeatureConfig::ApplyToProxy(const TSharedRef<INChartProxy>& InProxy) 
 	AxisProxy->SetAxisColor(AxisColor);
 	AxisProxy->SetAxisThickness(AxisThickness);
 	AxisProxy->SetPadding(Padding);
+	AxisProxy->SetShowTicks(bShowTicks);
+	AxisProxy->SetShowLabels(bShowLabels);
 }

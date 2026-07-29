@@ -1,7 +1,12 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+
 #pragma once
 
 #include "CoreMinimal.h"
 
+/**
+ * FPointBubblesState —— 气泡点标注绘制与交互状态
+ */
 struct NCHARTS_API FPointBubblesState
 {
 	TArray<FVector2D> Points;
@@ -9,6 +14,8 @@ struct NCHARTS_API FPointBubblesState
 	FVector2D Padding = FVector2D(16.0f, 12.0f);
 	float PointRadius = 4.0f;
 	float ActivationDistance = 20.0f;
+
+	/** 呼吸动画幅度（像素） */
 	float BreathAmplitude = 2.5f;
 	float BreathSpeed = 3.5f;
 

@@ -1,0 +1,23 @@
+﻿{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "JsonConverter",
+	"Description": "v0.1",
+	"Category": "Other",
+	"CreatedBy": "Neo",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "JsonConverter",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}

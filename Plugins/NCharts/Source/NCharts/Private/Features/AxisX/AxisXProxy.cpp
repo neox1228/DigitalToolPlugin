@@ -1,3 +1,5 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+
 #include "Features/AxisX/AxisXProxy.h"
 
 const FAxisXState& FAxisXProxy::GetState() const
@@ -26,4 +28,27 @@ void FAxisXProxy::SetPadding(const FVector2D& InPadding)
 {
 	State.Padding = InPadding;
 	StateChanged.Broadcast();
+}
+
+void FAxisXProxy::SetShowTicks(bool bEnable)
+{
+	State.bShowTicks = bEnable;
+	StateChanged.Broadcast();
+}
+
+void FAxisXProxy::SetShowLabels(bool bEnable)
+{
+	State.bShowLabels = bEnable;
+	StateChanged.Broadcast();
+}
+
+void FAxisXProxy::SetCartesianScale(const TSharedPtr<FNChartCartesianScale>& InScale)
+{
+	CartesianScale = InScale;
+	StateChanged.Broadcast();
+}
+
+TSharedPtr<FNChartCartesianScale> FAxisXProxy::GetCartesianScale() const
+{
+	return CartesianScale;
 }

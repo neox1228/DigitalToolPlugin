@@ -1,7 +1,10 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Core/NChartFeatureConfig.h"
+#include "Core/NChartTooltipTypes.h"
 #include "TooltipFeatureConfig.generated.h"
 
 UCLASS(BlueprintType, EditInlineNew, DefaultToInstanced)
@@ -15,6 +18,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NCharts|Tooltip")
 	bool bEnableTooltip = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NCharts|Tooltip")
+	EChartTooltipTrigger Trigger = EChartTooltipTrigger::Item;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NCharts|Tooltip")
 	bool bShowHoverLine = true;

@@ -1,7 +1,11 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+
 #include "Features/Tooltip/TooltipWidget.h"
 
-#include "Features/LineSeries/LineSeriesProxy.h"
-#include "Features/LineSeries/LineSeriesState.h"
+#include "Core/NChartCartesianScale.h"
+#include "Core/NChartLayoutUtils.h"
+#include "Core/NChartTooltipTypes.h"
+#include "Core/NChartTypes.h"
 #include "Features/Tooltip/TooltipProxy.h"
 #include "Features/Tooltip/TooltipState.h"
 #include "Input/Events.h"
@@ -11,78 +15,49 @@
 
 namespace
 {
-	bool BuildLineSeriesLayout(
-		const FLineSeriesState& State,
-		const FVector2D& GeometrySize,
-		FVector2D& OutDrawMin,
-		FVector2D& OutDrawMax,
-		TArray<FVector2D>& OutScreenPoints)
+	INChartTooltipDataProvider* ResolveProvider(const TSharedPtr<INChartProxy>& Proxy)
 	{
-		if (State.Points.Num() < 2)
-		{
-			return false;
-		}
-
-		OutDrawMin = State.Padding;
-		OutDrawMax = FVector2D(GeometrySize.X - State.Padding.X, GeometrySize.Y - State.Padding.Y);
-		const FVector2D DrawSize = OutDrawMax - OutDrawMin;
-		if (DrawSize.X <= 1.0f || DrawSize.Y <= 1.0f)
-		{
-			return false;
-		}
-
-		FVector2D Min(FLT_MAX, FLT_MAX);
-		FVector2D Max(-FLT_MAX, -FLT_MAX);
-		for (const FVector2D& Point : State.Points)
-		{
-			Min.X = FMath::Min(Min.X, Point.X);
-			Min.Y = FMath::Min(Min.Y, Point.Y);
-			Max.X = FMath::Max(Max.X, Point.X);
-			Max.Y = FMath::Max(Max.Y, Point.Y);
-		}
-
-		const float RangeX = FMath::Max(Max.X - Min.X, 1.0f);
-		const float RangeY = FMath::Max(Max.Y - Min.Y, 1.0f);
-
-		OutScreenPoints.Reset();
-		OutScreenPoints.Reserve(State.Points.Num());
-		for (const FVector2D& Point : State.Points)
-		{
-			const float NormalX = (Point.X - Min.X) / RangeX;
-			const float NormalY = (Point.Y - Min.Y) / RangeY;
-			OutScreenPoints.Add(FVector2D(
-				OutDrawMin.X + NormalX * DrawSize.X,
-				OutDrawMax.Y - NormalY * DrawSize.Y));
-		}
-
-		return true;
+		return Proxy.IsValid() ? Proxy->GetTooltipDataProvider() : nullptr;
 	}
 
-	bool FindNearestPoint(
-		const TArray<FVector2D>& ScreenPoints,
-		const FVector2D& MousePosition,
-		int32& OutIndex,
-		float& OutDistance)
+	FText BuildCombinedTooltipText(const TArray<FTooltipParam>& Params)
 	{
-		if (ScreenPoints.Num() == 0)
+		if (Params.Num() == 0)
 		{
-			return false;
+			return FText::GetEmpty();
 		}
 
-		OutIndex = INDEX_NONE;
-		OutDistance = TNumericLimits<float>::Max();
-
-		for (int32 Index = 0; Index < ScreenPoints.Num(); ++Index)
+		if (Params.Num() == 1)
 		{
-			const float Distance = FVector2D::DistSquared(ScreenPoints[Index], MousePosition);
-			if (Distance < OutDistance)
+			return Params[0].DisplayText;
+		}
+
+		FString Combined;
+		for (int32 Index = 0; Index < Params.Num(); ++Index)
+		{
+			if (Index > 0)
 			{
-				OutDistance = Distance;
-				OutIndex = Index;
+				Combined += TEXT("\n\n");
 			}
+			Combined += Params[Index].DisplayText.ToString();
+		}
+		return FText::FromString(Combined);
+	}
+
+	FVector2D GetTooltipAnchor(const FTooltipState& TooltipState)
+	{
+		if (TooltipState.ActiveParams.Num() == 0)
+		{
+			return FVector2D::ZeroVector;
 		}
 
-		return OutIndex != INDEX_NONE;
+		if (TooltipState.Trigger == EChartTooltipTrigger::Axis)
+		{
+			const FVector2D& FirstPoint = TooltipState.ActiveParams[0].ScreenPoint;
+			return FVector2D(TooltipState.AxisScreenX, FirstPoint.Y);
+		}
+
+		return TooltipState.ActiveParams[0].ScreenPoint;
 	}
 }
 
@@ -115,37 +90,26 @@ int32 STooltipWidget::OnPaint(
 	bool bParentEnabled) const
 {
 	const FTooltipState& TooltipState = Proxy->GetState();
-	if (!TooltipState.bEnableTooltip || !TooltipState.bHasHover || TooltipState.HoveredIndex == INDEX_NONE)
-	{
-		return LayerId;
-	}
-
-	TSharedPtr<FLineSeriesProxy> TargetLineProxy = Proxy->GetTargetLineProxy();
-	if (!TargetLineProxy.IsValid())
-	{
-		return LayerId;
-	}
-
-	const FLineSeriesState& LineState = TargetLineProxy->GetState();
-	const FVector2D Size = FVector2D(AllottedGeometry.GetLocalSize());
-	FVector2D DrawMin;
-	FVector2D DrawMax;
-	TArray<FVector2D> ScreenPoints;
-	if (!BuildLineSeriesLayout(LineState, Size, DrawMin, DrawMax, ScreenPoints))
+	if (!TooltipState.bEnableTooltip || !TooltipState.bHasHover || TooltipState.ActiveParams.Num() == 0)
 	{
 		return LayerId;
 	}
 
 	const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush("WhiteBrush");
-	const FVector2D HoverPoint = TooltipState.HoveredScreenPoint;
-	const FVector2D TooltipSize(140.0f, 42.0f);
-	const FVector2D TooltipPos = HoverPoint + TooltipState.TooltipOffset;
+	const FVector2D AnchorPoint = GetTooltipAnchor(TooltipState);
+	const float LineHeight = 18.0f;
+	const FVector2D TooltipSize(160.0f, 36.0f + FMath::Max(0, TooltipState.ActiveParams.Num() - 1) * LineHeight);
+	const FVector2D TooltipPos = AnchorPoint + TooltipState.TooltipOffset;
 
 	if (TooltipState.bShowHoverLine)
 	{
+		const float LineX = TooltipState.Trigger == EChartTooltipTrigger::Axis
+			? TooltipState.AxisScreenX
+			: TooltipState.ActiveParams[0].ScreenPoint.X;
+
 		TArray<FVector2D> HoverLinePoints;
-		HoverLinePoints.Add(FVector2D(HoverPoint.X, DrawMin.Y));
-		HoverLinePoints.Add(FVector2D(HoverPoint.X, DrawMax.Y));
+		HoverLinePoints.Add(FVector2D(LineX, TooltipState.DrawMin.Y));
+		HoverLinePoints.Add(FVector2D(LineX, TooltipState.DrawMax.Y));
 		FSlateDrawElement::MakeLines(
 			OutDrawElements,
 			LayerId + 1,
@@ -159,14 +123,19 @@ int32 STooltipWidget::OnPaint(
 
 	if (TooltipState.bShowHoverPoint)
 	{
-		const FVector2D MarkerSize(TooltipState.HoverPointRadius * 2.0f, TooltipState.HoverPointRadius * 2.0f);
-		FSlateDrawElement::MakeBox(
-			OutDrawElements,
-			LayerId + 2,
-			AllottedGeometry.ToPaintGeometry(FVector2D(HoverPoint.X - TooltipState.HoverPointRadius, HoverPoint.Y - TooltipState.HoverPointRadius), MarkerSize),
-			WhiteBrush,
-			ESlateDrawEffect::None,
-			TooltipState.HoverPointColor);
+		for (const FTooltipParam& Param : TooltipState.ActiveParams)
+		{
+			const FVector2D MarkerSize(TooltipState.HoverPointRadius * 2.0f, TooltipState.HoverPointRadius * 2.0f);
+			FSlateDrawElement::MakeBox(
+				OutDrawElements,
+				LayerId + 2,
+				AllottedGeometry.ToPaintGeometry(
+					FVector2D(Param.ScreenPoint.X - TooltipState.HoverPointRadius, Param.ScreenPoint.Y - TooltipState.HoverPointRadius),
+					MarkerSize),
+				WhiteBrush,
+				ESlateDrawEffect::None,
+				TooltipState.HoverPointColor);
+		}
 	}
 
 	FSlateDrawElement::MakeBox(
@@ -177,11 +146,7 @@ int32 STooltipWidget::OnPaint(
 		ESlateDrawEffect::None,
 		TooltipState.TooltipBackgroundColor);
 
-	const FText TooltipText = FText::Format(
-		FText::FromString(TEXT("X: {0}\nY: {1}")),
-		FText::AsNumber(TooltipState.HoveredDataPoint.X),
-		FText::AsNumber(TooltipState.HoveredDataPoint.Y));
-
+	const FText TooltipText = BuildCombinedTooltipText(TooltipState.ActiveParams);
 	FSlateDrawElement::MakeText(
 		OutDrawElements,
 		LayerId + 4,
@@ -235,39 +200,156 @@ void STooltipWidget::HandleStateChanged()
 
 bool STooltipWidget::UpdateHoverState(const FGeometry& MyGeometry, const FVector2D& LocalMousePosition)
 {
-	TSharedPtr<FLineSeriesProxy> TargetLineProxy = Proxy->GetTargetLineProxy();
-	if (!TargetLineProxy.IsValid())
-	{
-		ClearHoverState();
-		return false;
-	}
-
-	const FLineSeriesState& LineState = TargetLineProxy->GetState();
 	const FTooltipState& TooltipState = Proxy->GetState();
-	FVector2D DrawMin;
-	FVector2D DrawMax;
-	TArray<FVector2D> ScreenPoints;
-	if (!BuildLineSeriesLayout(LineState, FVector2D(MyGeometry.GetLocalSize()), DrawMin, DrawMax, ScreenPoints))
+	const FVector2D GeometrySize = FVector2D(MyGeometry.GetLocalSize());
+	const float ActivationDistSq = FMath::Square(TooltipState.ActivationDistance);
+
+	if (TooltipState.Trigger == EChartTooltipTrigger::Axis)
+	{
+		return UpdateAxisHoverState(GeometrySize, LocalMousePosition);
+	}
+
+	return UpdateItemHoverState(GeometrySize, LocalMousePosition, ActivationDistSq);
+}
+
+bool STooltipWidget::UpdateItemHoverState(
+	const FVector2D& GeometrySize,
+	const FVector2D& LocalMousePosition,
+	float ActivationDistSq)
+{
+	const TSharedPtr<FNChartCartesianScale> SharedScale = Proxy->GetCartesianScale();
+	if (SharedScale.IsValid())
+	{
+		SharedScale->UpdatePixelRect(SharedScale->Padding, GeometrySize);
+	}
+
+	FTooltipParam BestParam;
+	float BestDistanceSq = TNumericLimits<float>::Max();
+	FVector2D DrawMin = FVector2D::ZeroVector;
+	FVector2D DrawMax = FVector2D::ZeroVector;
+	bool bFound = false;
+
+	for (const TWeakPtr<INChartProxy>& WeakProvider : Proxy->GetDataProviders())
+	{
+		const TSharedPtr<INChartProxy> ProviderProxy = WeakProvider.Pin();
+		INChartTooltipDataProvider* Provider = ResolveProvider(ProviderProxy);
+		if (!Provider)
+		{
+			continue;
+		}
+
+		TArray<FVector2D> ScreenPoints;
+		if (SharedScale.IsValid())
+		{
+			SharedScale->BuildScreenPoints(Provider->GetDataPoints(), ScreenPoints);
+			DrawMin = SharedScale->DrawMin;
+			DrawMax = SharedScale->DrawMax;
+		}
+		else
+		{
+			FNChartScreenLayout Layout;
+			if (!FNChartLayoutUtils::BuildScreenLayout(
+				Provider->GetDataPoints(),
+				Provider->GetChartPadding(),
+				GeometrySize,
+				Provider->GetMinPointCountForLayout(),
+				Layout))
+			{
+				continue;
+			}
+			ScreenPoints = Layout.ScreenPoints;
+			DrawMin = Layout.DrawMin;
+			DrawMax = Layout.DrawMax;
+		}
+
+		float DistanceSq = 0.0f;
+		const int32 PointIndex = FNChartLayoutUtils::FindNearestByScreenPosition(ScreenPoints, LocalMousePosition, DistanceSq);
+		if (PointIndex == INDEX_NONE || DistanceSq >= BestDistanceSq)
+		{
+			continue;
+		}
+
+		BestDistanceSq = DistanceSq;
+		BestParam.SeriesName = Provider->GetSeriesName();
+		BestParam.FeatureType = Provider->GetProviderFeatureType();
+		BestParam.PointIndex = PointIndex;
+		BestParam.DataPoint = Provider->GetDataPoints()[PointIndex];
+		BestParam.ScreenPoint = ScreenPoints[PointIndex];
+		BestParam.DisplayText = Provider->FormatTooltipText(PointIndex);
+		bFound = true;
+	}
+
+	if (!bFound || BestDistanceSq > ActivationDistSq)
 	{
 		ClearHoverState();
 		return false;
 	}
 
-	int32 HoverIndex = INDEX_NONE;
-	float BestDistance = 0.0f;
-	if (!FindNearestPoint(ScreenPoints, LocalMousePosition, HoverIndex, BestDistance) || !LineState.Points.IsValidIndex(HoverIndex))
+	TArray<FTooltipParam> Params;
+	Params.Add(BestParam);
+	Proxy->SetActiveTooltip(Params, BestParam.ScreenPoint.X, DrawMin, DrawMax);
+	return true;
+}
+
+bool STooltipWidget::UpdateAxisHoverState(const FVector2D& GeometrySize, const FVector2D& LocalMousePosition)
+{
+	const TSharedPtr<FNChartCartesianScale> SharedScale = Proxy->GetCartesianScale();
+	if (!SharedScale.IsValid())
 	{
 		ClearHoverState();
 		return false;
 	}
 
-	if (BestDistance > FMath::Square(TooltipState.ActivationDistance))
+	SharedScale->UpdatePixelRect(SharedScale->Padding, GeometrySize);
+
+	float DataX = 0.0f;
+	if (!SharedScale->ScreenXToDataX(LocalMousePosition.X, DataX))
 	{
 		ClearHoverState();
 		return false;
 	}
 
-	Proxy->SetHoverState(HoverIndex, LineState.Points[HoverIndex], ScreenPoints[HoverIndex]);
+	TArray<FTooltipParam> Params;
+	for (const TWeakPtr<INChartProxy>& WeakProvider : Proxy->GetDataProviders())
+	{
+		const TSharedPtr<INChartProxy> ProviderProxy = WeakProvider.Pin();
+		INChartTooltipDataProvider* Provider = ResolveProvider(ProviderProxy);
+		if (!Provider)
+		{
+			continue;
+		}
+
+		const int32 PointIndex = FNChartLayoutUtils::FindNearestByDataX(Provider->GetDataPoints(), DataX);
+		if (PointIndex == INDEX_NONE)
+		{
+			continue;
+		}
+
+		TArray<FVector2D> ScreenPoints;
+		SharedScale->BuildScreenPoints(Provider->GetDataPoints(), ScreenPoints);
+		if (!ScreenPoints.IsValidIndex(PointIndex))
+		{
+			continue;
+		}
+
+		FTooltipParam Param;
+		Param.SeriesName = Provider->GetSeriesName();
+		Param.FeatureType = Provider->GetProviderFeatureType();
+		Param.PointIndex = PointIndex;
+		Param.DataPoint = Provider->GetDataPoints()[PointIndex];
+		Param.ScreenPoint = ScreenPoints[PointIndex];
+		Param.DisplayText = Provider->FormatTooltipText(PointIndex);
+		Params.Add(Param);
+	}
+
+	if (Params.Num() == 0)
+	{
+		ClearHoverState();
+		return false;
+	}
+
+	const float AxisScreenX = FMath::Clamp(LocalMousePosition.X, SharedScale->DrawMin.X, SharedScale->DrawMax.X);
+	Proxy->SetActiveTooltip(Params, AxisScreenX, SharedScale->DrawMin, SharedScale->DrawMax);
 	return true;
 }
 

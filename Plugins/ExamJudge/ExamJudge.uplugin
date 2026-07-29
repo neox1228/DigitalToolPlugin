@@ -1,0 +1,19 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "0.1.0",
+  "FriendlyName": "ExamJudge",
+  "Description": "Lightweight state-driven sub-question completion judge for exam systems (ActionId + Context + AST).",
+  "Category": "Gameplay",
+  "CreatedBy": "Neo",
+  "EnabledByDefault": false,
+  "CanContainContent": true,
+  "IsBetaVersion": true,
+  "Modules": [
+    {
+      "Name": "ExamJudgeRuntime",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ]
+}

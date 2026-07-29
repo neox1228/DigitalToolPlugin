@@ -1,5 +1,9 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+// FPointBubblesProxy 实现
+
 #include "Features/PointBubbles/PointBubblesProxy.h"
 
+#include "Core/NChartCartesianScale.h"
 #include "Core/NChartMathLib.h"
 
 TSharedRef<FPointBubblesProxy> FPointBubblesProxy::CreateDemo()
@@ -115,4 +119,50 @@ void FPointBubblesProxy::ClearHoverState()
 		State.HoveredScreenPoint = FVector2D::ZeroVector;
 		StateChanged.Broadcast();
 	}
+}
+
+FName FPointBubblesProxy::GetSeriesName() const
+{
+	return TEXT("Point Bubbles");
+}
+
+EChartFeatureType FPointBubblesProxy::GetProviderFeatureType() const
+{
+	return EChartFeatureType::PointBubbles;
+}
+
+FVector2D FPointBubblesProxy::GetChartPadding() const
+{
+	return State.Padding;
+}
+
+const TArray<FVector2D>& FPointBubblesProxy::GetDataPoints() const
+{
+	return State.Points;
+}
+
+FText FPointBubblesProxy::FormatTooltipText(int32 PointIndex) const
+{
+	if (!State.Points.IsValidIndex(PointIndex))
+	{
+		return FText::GetEmpty();
+	}
+
+	const FVector2D& Point = State.Points[PointIndex];
+	return FText::Format(
+		FText::FromString(TEXT("{0}\nX: {1}\nY: {2}")),
+		FText::FromName(GetSeriesName()),
+		FText::AsNumber(Point.X),
+		FText::AsNumber(Point.Y));
+}
+
+void FPointBubblesProxy::SetCartesianScale(const TSharedPtr<FNChartCartesianScale>& InScale)
+{
+	CartesianScale = InScale;
+	StateChanged.Broadcast();
+}
+
+TSharedPtr<FNChartCartesianScale> FPointBubblesProxy::GetCartesianScale() const
+{
+	return CartesianScale;
 }

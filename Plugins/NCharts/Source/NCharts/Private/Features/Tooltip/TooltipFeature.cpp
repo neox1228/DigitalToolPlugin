@@ -1,7 +1,8 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+
 #include "Features/Tooltip/TooltipFeatureConfig.h"
 
 #include "Core/NChartRegistry.h"
-#include "Features/LineSeries/LineSeriesProxy.h"
 #include "Features/Tooltip/TooltipProxy.h"
 #include "Features/Tooltip/TooltipWidget.h"
 
@@ -36,17 +37,10 @@ namespace
 					return;
 				}
 
-				const TSharedPtr<INChartProxy>* LineBase = FeatureProxies.Find(EChartFeatureType::LineSeries);
-				TSharedPtr<FLineSeriesProxy> LineProxy;
-				if (LineBase && LineBase->IsValid())
-				{
-					LineProxy = StaticCastSharedPtr<FLineSeriesProxy>(*LineBase);
-				}
-
 				const TSharedPtr<FTooltipProxy> TooltipProxy = StaticCastSharedPtr<FTooltipProxy>(*TooltipBase);
 				if (TooltipProxy.IsValid())
 				{
-					TooltipProxy->SetTargetLineProxy(LineProxy);
+					TooltipProxy->SetDataProviders(FeatureProxies);
 				}
 			};
 			FNChartRegistry::Get().RegisterFeature(Descriptor);

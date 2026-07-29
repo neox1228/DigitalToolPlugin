@@ -1,3 +1,5 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -12,16 +14,33 @@ class NCHARTS_API UAxisYFeatureConfig : public UNChartFeatureConfigBase
 public:
 	virtual EChartFeatureType GetFeatureType() const override;
 	virtual void ApplyToProxy(const TSharedRef<INChartProxy>& InProxy) const override;
-	
-	// 坐标轴类型
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NCharts|AxisY")
 	EAxisType AxisType = EAxisType::Value;
-	
-	UPROPERTY()
-	bool bIsCategoryMode;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="NCharts|AxisY", meta = (EditCondition = "AxisType = EAxisType::Category", EditConditionHides))
-	TArray<FString> AxisData ;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NCharts|AxisY", meta = (EditCondition = "AxisType == EAxisType::Category", EditConditionHides))
+	TArray<FString> CategoryData;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NCharts|AxisY", meta = (EditCondition = "AxisType == EAxisType::Value", EditConditionHides))
+	bool bAutoMin = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NCharts|AxisY", meta = (EditCondition = "AxisType == EAxisType::Value && !bAutoMin", EditConditionHides))
+	float MinValue = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NCharts|AxisY", meta = (EditCondition = "AxisType == EAxisType::Value", EditConditionHides))
+	bool bAutoMax = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NCharts|AxisY", meta = (EditCondition = "AxisType == EAxisType::Value && !bAutoMax", EditConditionHides))
+	float MaxValue = 100.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NCharts|AxisY", meta = (ClampMin = "2", ClampMax = "12"))
+	int32 SplitCount = 5;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NCharts|AxisY")
+	bool bShowTicks = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NCharts|AxisY")
+	bool bShowLabels = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NCharts|AxisY")
 	FLinearColor AxisColor = FLinearColor(0.6f, 0.6f, 0.6f, 1.0f);
@@ -31,10 +50,4 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NCharts|AxisY")
 	FVector2D Padding = FVector2D(16.0f, 12.0f);
-	
-
-	#if WITH_EDITOR
-	virtual void PostEditChangeChainProperty(struct FPropertyChangedChainEvent& PropertyChangedEvent) override;
-	#endif
-	
 };

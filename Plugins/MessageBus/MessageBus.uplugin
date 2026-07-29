@@ -1,0 +1,34 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "0.1.0",
+  "FriendlyName": "MessageBus",
+  "Description": "Schema-driven global MessageBus subsystem for decoupled in-project Pub/Sub messaging.",
+  "Category": "Gameplay",
+  "CreatedBy": "Neo",
+  "EnabledByDefault": false,
+  "CanContainContent": true,
+  "IsBetaVersion": true,
+  "Modules": [
+    {
+      "Name": "MessageBusRuntime",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    },
+    {
+      "Name": "MessageBusEditor",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "StructUtils",
+      "Enabled": true
+    },
+    {
+      "Name": "DataValidation",
+      "Enabled": true
+    }
+  ]
+}

@@ -1,11 +1,16 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+// FLineSeriesProxy 实现：折线数据管理与派生状态计算
+
 #include "Features/LineSeries/LineSeriesProxy.h"
 
+#include "Core/NChartCartesianScale.h"
 #include "Core/NChartMathLib.h"
 
 TSharedRef<FLineSeriesProxy> FLineSeriesProxy::CreateDemo()
 {
 	TSharedRef<FLineSeriesProxy> Proxy = MakeShared<FLineSeriesProxy>();
 
+	// 演示数据：7 个点的折线，其中部分超过 YLimit=25
 	TArray<FVector2D> DemoPoints;
 	DemoPoints.Add(FVector2D(0.0, 10.0));
 	DemoPoints.Add(FVector2D(1.0, 18.0));
@@ -61,6 +66,7 @@ void FLineSeriesProxy::SetPadding(const FVector2D& InPadding)
 
 void FLineSeriesProxy::UpdateDerivedState()
 {
+	// 检测是否存在超限数据点
 	State.bOverLimit = false;
 	if (State.bUseLimit)
 	{
@@ -74,5 +80,57 @@ void FLineSeriesProxy::UpdateDerivedState()
 		}
 	}
 
+	// 根据超限状态选择实际绘制颜色
 	State.ActiveLineColor = State.bOverLimit ? State.OverLimitColor : State.BaseLineColor;
+}
+
+FName FLineSeriesProxy::GetSeriesName() const
+{
+	return TEXT("Line Series");
+}
+
+EChartFeatureType FLineSeriesProxy::GetProviderFeatureType() const
+{
+	return EChartFeatureType::LineSeries;
+}
+
+FVector2D FLineSeriesProxy::GetChartPadding() const
+{
+	return State.Padding;
+}
+
+const TArray<FVector2D>& FLineSeriesProxy::GetDataPoints() const
+{
+	return State.Points;
+}
+
+FText FLineSeriesProxy::FormatTooltipText(int32 PointIndex) const
+{
+	if (!State.Points.IsValidIndex(PointIndex))
+	{
+		return FText::GetEmpty();
+	}
+
+	const FVector2D& Point = State.Points[PointIndex];
+	return FText::Format(
+		FText::FromString(TEXT("{0}\nX: {1}\nY: {2}")),
+		FText::FromName(GetSeriesName()),
+		FText::AsNumber(Point.X),
+		FText::AsNumber(Point.Y));
+}
+
+int32 FLineSeriesProxy::GetMinPointCountForLayout() const
+{
+	return 1;
+}
+
+void FLineSeriesProxy::SetCartesianScale(const TSharedPtr<FNChartCartesianScale>& InScale)
+{
+	CartesianScale = InScale;
+	StateChanged.Broadcast();
+}
+
+TSharedPtr<FNChartCartesianScale> FLineSeriesProxy::GetCartesianScale() const
+{
+	return CartesianScale;
 }

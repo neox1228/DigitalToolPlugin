@@ -1,3 +1,5 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+
 #include "Features/Tooltip/TooltipFeatureConfig.h"
 
 #include "Features/Tooltip/TooltipProxy.h"
@@ -11,6 +13,7 @@ void UTooltipFeatureConfig::ApplyToProxy(const TSharedRef<INChartProxy>& InProxy
 {
 	const TSharedRef<FTooltipProxy> TooltipProxy = StaticCastSharedRef<FTooltipProxy>(InProxy);
 	TooltipProxy->SetTooltipEnabled(bEnableTooltip);
+	TooltipProxy->SetTrigger(Trigger);
 	TooltipProxy->SetShowHoverLine(bShowHoverLine);
 	TooltipProxy->SetShowHoverPoint(bShowHoverPoint);
 	TooltipProxy->SetActivationDistance(ActivationDistance);

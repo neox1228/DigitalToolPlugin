@@ -1,3 +1,5 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -5,6 +7,14 @@
 
 class FLineSeriesProxy;
 
+/**
+ * SLineSeriesWidget —— 折线 Slate 绘制控件
+ *
+ * 核心绘制逻辑：
+ * 1. 计算数据点的 min/max 范围
+ * 2. 将数据坐标归一化映射到屏幕绘制区域
+ * 3. 使用 FSlateDrawElement::MakeLines 绘制折线
+ */
 class NCHARTS_API SLineSeriesWidget : public SLeafWidget
 {
 public:

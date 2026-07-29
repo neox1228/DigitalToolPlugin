@@ -1,8 +1,12 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+
 #include "Features/AxisX/AxisXWidget.h"
 
+#include "Core/NChartCartesianScale.h"
 #include "Features/AxisX/AxisXProxy.h"
 #include "Features/AxisX/AxisXState.h"
 #include "Rendering/DrawElements.h"
+#include "Styling/CoreStyle.h"
 
 void SAxisXWidget::Construct(const FArguments& InArgs)
 {
@@ -34,9 +38,16 @@ int32 SAxisXWidget::OnPaint(
 {
 	const FAxisXState& State = Proxy->GetState();
 	const FVector2D Size = FVector2D(AllottedGeometry.GetLocalSize());
-	const FVector2D Padding = State.Padding;
-	const FVector2D DrawMin = Padding;
-	const FVector2D DrawMax = FVector2D(Size.X - Padding.X, Size.Y - Padding.Y);
+	const TSharedPtr<FNChartCartesianScale> Scale = Proxy->GetCartesianScale();
+
+	FVector2D DrawMin = State.Padding;
+	FVector2D DrawMax = FVector2D(Size.X - State.Padding.X, Size.Y - State.Padding.Y);
+	if (Scale.IsValid())
+	{
+		Scale->UpdatePixelRect(State.Padding, Size);
+		DrawMin = Scale->DrawMin;
+		DrawMax = Scale->DrawMax;
+	}
 
 	TArray<FVector2D> AxisPoints;
 	AxisPoints.Add(FVector2D(DrawMin.X, DrawMax.Y));
@@ -52,7 +63,42 @@ int32 SAxisXWidget::OnPaint(
 		true,
 		State.AxisThickness);
 
-	return LayerId;
+	if (Scale.IsValid() && State.bShowTicks)
+	{
+		const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush("WhiteBrush");
+		for (const FNChartAxisTick& Tick : Scale->XTicks)
+		{
+			TArray<FVector2D> TickLine;
+			TickLine.Add(FVector2D(Tick.ScreenPos, DrawMax.Y));
+			TickLine.Add(FVector2D(Tick.ScreenPos, DrawMax.Y + 4.0f));
+			FSlateDrawElement::MakeLines(
+				OutDrawElements,
+				LayerId + 1,
+				AllottedGeometry.ToPaintGeometry(),
+				TickLine,
+				ESlateDrawEffect::None,
+				State.AxisColor,
+				true,
+				1.0f);
+
+			if (State.bShowLabels)
+			{
+				const FVector2D LabelSize(48.0f, 14.0f);
+				FSlateDrawElement::MakeText(
+					OutDrawElements,
+					LayerId + 2,
+					AllottedGeometry.ToPaintGeometry(
+						FVector2D(Tick.ScreenPos - LabelSize.X * 0.5f, DrawMax.Y + 6.0f),
+						LabelSize),
+					Tick.Label,
+					FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 9),
+					ESlateDrawEffect::None,
+					FLinearColor::Gray);
+			}
+		}
+	}
+
+	return LayerId + 2;
 }
 
 FVector2D SAxisXWidget::ComputeDesiredSize(float LayoutScaleMultiplier) const

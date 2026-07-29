@@ -1,3 +1,6 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+// LineSeries Feature 静态注册器
+
 #include "Features/LineSeries/LineSeriesFeatureConfig.h"
 #include "Core/NChartRegistry.h"
 #include "Features/LineSeries/LineSeriesProxy.h"

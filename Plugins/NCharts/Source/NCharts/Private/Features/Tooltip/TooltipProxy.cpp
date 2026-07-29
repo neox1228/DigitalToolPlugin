@@ -1,6 +1,8 @@
+// Copyright NCharts Plugin. All Rights Reserved.
+
 #include "Features/Tooltip/TooltipProxy.h"
 
-#include "Features/LineSeries/LineSeriesProxy.h"
+#include "Core/NChartCartesianScale.h"
 
 const FTooltipState& FTooltipProxy::GetState() const
 {
@@ -12,15 +14,31 @@ FTooltipProxy::FOnStateChanged& FTooltipProxy::OnStateChanged()
 	return StateChanged;
 }
 
-void FTooltipProxy::SetTargetLineProxy(const TSharedPtr<FLineSeriesProxy>& InTargetLineProxy)
+void FTooltipProxy::SetDataProviders(const TMap<EChartFeatureType, TSharedPtr<INChartProxy>>& FeatureProxies)
 {
-	TargetLineProxy = InTargetLineProxy;
+	DataProviders.Reset();
+
+	for (const TPair<EChartFeatureType, TSharedPtr<INChartProxy>>& Pair : FeatureProxies)
+	{
+		if (Pair.Key == EChartFeatureType::Tooltip)
+		{
+			continue;
+		}
+
+		const TSharedPtr<INChartProxy>& Proxy = Pair.Value;
+		if (Proxy.IsValid() && Proxy->GetTooltipDataProvider())
+		{
+			DataProviders.Add(Proxy);
+		}
+	}
+
 	StateChanged.Broadcast();
 }
 
-TSharedPtr<FLineSeriesProxy> FTooltipProxy::GetTargetLineProxy() const
+void FTooltipProxy::SetTrigger(EChartTooltipTrigger InTrigger)
 {
-	return TargetLineProxy.Pin();
+	State.Trigger = InTrigger;
+	StateChanged.Broadcast();
 }
 
 void FTooltipProxy::SetTooltipEnabled(bool bEnable)
@@ -83,12 +101,17 @@ void FTooltipProxy::SetTooltipOffset(const FVector2D& InOffset)
 	StateChanged.Broadcast();
 }
 
-void FTooltipProxy::SetHoverState(int32 InIndex, const FVector2D& InDataPoint, const FVector2D& InScreenPoint)
+void FTooltipProxy::SetActiveTooltip(
+	const TArray<FTooltipParam>& InParams,
+	float InAxisScreenX,
+	const FVector2D& InDrawMin,
+	const FVector2D& InDrawMax)
 {
-	State.bHasHover = true;
-	State.HoveredIndex = InIndex;
-	State.HoveredDataPoint = InDataPoint;
-	State.HoveredScreenPoint = InScreenPoint;
+	State.bHasHover = InParams.Num() > 0;
+	State.ActiveParams = InParams;
+	State.AxisScreenX = InAxisScreenX;
+	State.DrawMin = InDrawMin;
+	State.DrawMax = InDrawMax;
 	StateChanged.Broadcast();
 }
 
@@ -97,9 +120,19 @@ void FTooltipProxy::ClearHoverState()
 	if (State.bHasHover)
 	{
 		State.bHasHover = false;
-		State.HoveredIndex = INDEX_NONE;
-		State.HoveredDataPoint = FVector2D::ZeroVector;
-		State.HoveredScreenPoint = FVector2D::ZeroVector;
+		State.ActiveParams.Reset();
+		State.AxisScreenX = 0.0f;
 		StateChanged.Broadcast();
 	}
+}
+
+void FTooltipProxy::SetCartesianScale(const TSharedPtr<FNChartCartesianScale>& InScale)
+{
+	CartesianScale = InScale;
+	StateChanged.Broadcast();
+}
+
+TSharedPtr<FNChartCartesianScale> FTooltipProxy::GetCartesianScale() const
+{
+	return CartesianScale;
 }
