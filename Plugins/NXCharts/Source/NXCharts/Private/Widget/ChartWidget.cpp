@@ -47,3 +47,28 @@ UChartComponent* UChartWidget::AddComponent(TSubclassOf<UChartComponent> Compone
 	RefreshChart();
 	return NewComp;
 }
+
+UChartModule* UChartWidget::GetModuleByName(FName ModuleName) const
+{
+	UChartModule* CurrentModule = nullptr;
+	for (UChartModule* Module : Modules)
+	{
+		if (Module->ModuleName == ModuleName)
+		{
+			CurrentModule = Module;
+			break;
+		}
+	}
+	return CurrentModule;
+}
+
+UChartComponent* UChartWidget::GetComponentByName(FName ComponentName) const
+{
+	UChartComponent* CurrentComponent = nullptr;
+	for (UChartComponent* Component : Components)
+	{
+		CurrentComponent = Component;
+		break;
+	}
+	return CurrentComponent;
+}

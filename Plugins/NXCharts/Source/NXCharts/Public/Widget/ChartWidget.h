@@ -38,6 +38,14 @@ public:
 	// 蓝图可调用：动态添加组件，并可选指定父模块名
 	UFUNCTION(BlueprintCallable, Category = "Chart")
 	UChartComponent* AddComponent(TSubclassOf<UChartComponent> ComponentClass, FName ModuleName = NAME_None);
+	
+	// 蓝图可调用：通过名称获取Module
+	UFUNCTION(BlueprintCallable, Category = "Chart")
+	UChartModule* GetModuleByName(FName ModuleName) const;
+	
+	// 蓝图可调用：通过名称获取Component
+	UFUNCTION(BlueprintCallable, Category = "Chart")
+	UChartComponent* GetComponentByName(FName ComponentName) const;
 
 	// 事件：点击数据项
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnChartItemClicked, UChartComponent*, Component, int32, ItemIndex);
