@@ -15,12 +15,8 @@ class NXCHARTS_API UCartesianCoordModule : public UChartModule
 	GENERATED_BODY()
 public:
 	// 用户配置的轴范围
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FVector2D XAxisRange = FVector2D(0, 100);
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FVector2D YAxisRange = FVector2D(0, 100);
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bAutoAdjustRange = true;
 
 	// 实际绘图使用的缓存范围（可能根据数据自动调整）
 	FVector2D CachedXRange, CachedYRange;
