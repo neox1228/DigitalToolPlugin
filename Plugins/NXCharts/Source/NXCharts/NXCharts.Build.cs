@@ -1,4 +1,4 @@
-﻿// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright Epic Games, Inc. All Rights Reserved.
 
 using UnrealBuildTool;
 
@@ -7,48 +7,32 @@ public class NXCharts : ModuleRules
 	public NXCharts(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-		
-		PublicIncludePaths.AddRange(
-			new string[] {
-				// ... add public include paths required here ...
-			}
-			);
-				
-		
-		PrivateIncludePaths.AddRange(
-			new string[] {
-				// ... add other private include paths required here ...
-			}
-			);
-			
-		
+
+		// 说明：本插件的 Public 头文件中直接暴露了 UObject/Engine/Slate 类型
+		// （ChartPaintContext.h 用到 Slate 绘制类型，ChartTheme.h 用到 UDataAsset），
+		// 按 UE 的模块规则，这些依赖必须在 Public 中，否则使用方会编译失败。
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
 				"Core",
+				"CoreUObject",
+				"Engine",
 				"UMG",
+				"Slate",
+				"SlateCore",
 				"InputCore"
-				// ... add other public dependencies that you statically link with here ...
 			}
 			);
-			
-		
+
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"CoreUObject",
-				"Engine",
-				"Slate",
-				"SlateCore",
-				// ... add private dependencies that you statically link with here ...	
 			}
 			);
-		
-		
+
 		DynamicallyLoadedModuleNames.AddRange(
 			new string[]
 			{
-				// ... add any modules that your module loads dynamically here ...
 			}
 			);
 	}

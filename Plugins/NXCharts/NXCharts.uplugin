@@ -1,16 +1,16 @@
-﻿{
+{
 	"FileVersion": 3,
-	"Version": 1,
-	"VersionName": "1.0",
+	"Version": 2,
+	"VersionName": "2.0",
 	"FriendlyName": "NXCharts",
-	"Description": "V0.1",
+	"Description": "Spec-driven runtime chart system for UMG. Configure or mutate charts at runtime without editing widgets.",
 	"Category": "Other",
 	"CreatedBy": "Neo",
 	"CreatedByURL": "",
 	"DocsURL": "",
 	"MarketplaceURL": "",
 	"CanContainContent": true,
-	"IsBetaVersion": false,
+	"IsBetaVersion": true,
 	"IsExperimentalVersion": false,
 	"Installed": false,
 	"Modules": [
