@@ -1,4 +1,4 @@
-# Build/Intermediate/Binary 文件夹和DerivedDataCache
+# Build/Intermediate/Binary 文件夹和 DerivedDataCache
 Binaries/
 Platforms/
 Intermediate/
@@ -9,15 +9,19 @@ DerivedDataCache/
 .DS_Store
 Thumbs.db
 
-# 忽略VSCode和Visual Studio文件
+# 忽略 VSCode / Visual Studio / Rider 生成物
 .vscode/
 .vs/
 .idea/
 *.code-workspace
 *.sln
+*.slnx
 *.VC.db
 *.VC.opendb
-.vscomfig
+.vsconfig
 
-# 忽略Mac特有文件
-.DS_Store
+# 本地打包/临时产物
+Plugins.zip
+
+# 工具留下的本地目录（沙箱权限修复备份等）
+.dsh-acl-recovery/
