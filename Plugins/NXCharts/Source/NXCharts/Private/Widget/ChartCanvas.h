@@ -60,4 +60,8 @@ private:
 	bool bPanning = false;
 	FVector2D PanStartLocal = FVector2D::ZeroVector;
 	FChartCartesianSpace PanStartSpace;
+
+	/** 双击检测：上次左键按下的时间与位置 */
+	mutable double LastClickTime = 0.0;
+	mutable FVector2D LastClickPosition = FVector2D::ZeroVector;
 };

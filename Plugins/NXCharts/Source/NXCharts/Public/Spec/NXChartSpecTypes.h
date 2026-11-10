@@ -142,4 +142,17 @@ struct NXCHARTS_API FChartAxisSpec
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Axis")
 	bool bShowLabels = true;
+
+	/**
+	 * 是否把轴的取值范围限制在 HardLimits 内。
+	 * 开启后自动域、手动域、缩放与平移都会被夹在这个区间，
+	 * 因此不会出现"滚轮缩放把轴撑到负数"的情况，也缩不到数据范围之外。
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Axis|Limits")
+	bool bUseHardLimits = false;
+
+	/** X = 下界，Y = 上界。数据全为非负时把下界设成 0 即可 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Axis|Limits",
+		meta = (EditCondition = "bUseHardLimits", EditConditionHides))
+	FVector2D HardLimits = FVector2D(0.0, 100.0);
 };

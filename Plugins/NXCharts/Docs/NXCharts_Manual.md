@@ -3,6 +3,7 @@
 > 版本：阶段 A/B 完成（含主题化、平滑曲线、渐变填充、悬停、缩放平移、图例联动）
 > 引擎：**UE 5.8** · 模块：`NXCharts`（Runtime，无编辑器依赖）
 > 本文涵盖：架构 · 技术栈 · 使用 · 扩展
+> 接口速查见 **[NXCharts_API.md](NXCharts_API.md)**（蓝图节点 / Spec 字段 / 枚举 / 变更记录）
 
 ---
 
@@ -111,7 +112,8 @@ Padding → 标题带 → 图例带 → 刻度（nice numbers）→ 测最宽标
 Plugins/NXCharts/
 ├─ NXCharts.uplugin
 ├─ Docs/
-│  ├─ NXCharts_Manual.md          ← 本文
+│  ├─ NXCharts_Manual.md          ← 本文（架构 / 技术栈 / 使用 / 扩展）
+│  ├─ NXCharts_API.md             ← 接口文档（蓝图节点 / Spec / 枚举 / 变更记录）
 │  └─ Archive/                    ← 历史设计文档（评审、V2 方案、过程记录）
 └─ Source/NXCharts/
    ├─ NXCharts.Build.cs
@@ -173,7 +175,7 @@ Plugins/NXCharts/
 
 **字体留空即可**，会回落到引擎默认字体（打包后仍有效）。
 
-### 6.2 运行时 API（蓝图）
+### 6.2 运行时 API（蓝图，完整列表见 NXCharts_API.md）
 
 | 节点 | 用途 |
 | --- | --- |
@@ -229,6 +231,49 @@ Plugins/NXCharts/
 
 ---
 
+### 6.6 轴取值范围限制（防负值 / 防缩飞）
+
+`AxisX` / `AxisY` 下的 `Limits` 分组：
+
+| 字段 | 说明 |
+| --- | --- |
+| `bUseHardLimits` | 开启后，自动域、手动域、缩放、平移**全部**被夹在该区间内 |
+| `HardLimits` | `X` = 下界，`Y` = 上界。数据全非负就填 `(0, 上限)` |
+
+开启后的行为：
+
+- 滚轮缩放到边界即停（**不回写**超界的覆盖值，否则反向缩放要退很多步）
+- 数据完全落在限制区间外时，展示整个限制区间而不是一片空白
+- 顺带解决自动域 5% padding 造成的负域（数据 `0~1500` 时域本是 `-75~1575`）
+
+### 6.7 外部十字准星（多图联动）
+
+```text
+SetCrosshairX(1.5)          // 传数据坐标的 X，吸附最近点并显示各系列的值
+ClearCrosshair()
+IsCrosshairActive()
+OnCrosshairSnapped(SeriesKey, PointIndex, DataValue)   // 吸附结果，每条系列各一次
+```
+
+- 吸附的是**真实数据点**，不是插值，所以显示的值可信
+- 激活期间鼠标悬停让位，避免两条竖线打架
+- 信息框固定在绘图区顶部、跟随竖线横移；X 落在视野外时不绘制
+- 多图联动：同一个 X 传给多个 Widget 即可（ECharts `axisPointer.link` 的效果）
+
+### 6.8 线与点的增删改查
+
+| 层级 | 接口 |
+| --- | --- |
+| 系列 · 增 | `AddSeries` / `AddOrUpdateSeries` |
+| 系列 · 查 | `HasSeries` / `GetSeriesSpec` / `GetSeriesKeys` |
+| 系列 · 改 | `SetSeriesStyle` / `SetSeriesColor` / `SetSeriesCurve` / `SetSeriesDisplayName` / `SetSeriesVisible` |
+| 系列 · 删 | `RemoveSeries` |
+| 点 · 增 | `AddSeriesPoint`（追加）/ `InsertSeriesPoint`（按索引插入） |
+| 点 · 查 | `GetSeriesPoints` / `GetSeriesPointCount` / `GetSeriesPointAt` |
+| 点 · 改 | `SetSeriesPoints`（整体替换）/ `SetSeriesPointAt`（单点） |
+| 点 · 删 | `ClearSeries`（清空）/ `RemoveSeriesPointAt`（单点）/ `RemoveSeriesPointsInXRange`（按 X 区间批量，裁历史窗口用） |
+
+所有点级操作都会递增 `Revision`，只触发几何重建，不重新布局。
 ## 7. 扩展指南
 
 ### 7.1 新增一种图表类型（如柱状图）
@@ -314,7 +359,7 @@ MyProject2Editor modifies the values of properties:
 This is not allowed, as MyProject2Editor has build products in common with UnrealEditor.
 ```
 
-### 自动化测试（10 组）
+### 自动化测试（14 组）
 
 ```
 NXCharts.Frame.Pipeline        2 条系列 → 协调成 3 条 → 增量重建 → 域扩张整帧重建
@@ -327,6 +372,9 @@ NXCharts.Layout.Ticks          1-2-5 步长、小数位、格式化、域外刻�
 NXCharts.Layout.Space          中点映射、逆映射往返、Y 轴翻转
 NXCharts.Layout.LabelFormat    刻度后缀、DisplayName 回退
 NXCharts.Layout.Legend         隐藏系列保留、条目顺序、不重叠
+NXCharts.Data.PointCrud        点级增删改查、越界拒绝、版本递增
+NXCharts.Frame.NearestPoint    最近点查询（悬停与外部准星共用）
+NXCharts.Layout.Clamp          缩放夹紧：限制内放大被接受、顶死边界被拒绝
 ```
 
 命令行跑（**必须先关闭编辑器**，否则第二实例会被顶掉、测试不执行）：
@@ -341,4 +389,4 @@ NXCharts.Layout.Legend         隐藏系列保留、条目顺序、不重叠
 > **不要加 `-nullrhi`**：在 5.7/5.8 上都会让编辑器在 `FEngineLoop::Init()` 之后
 > `Fatal error: Null assigned to TNotNull` 崩溃，测试一条都跑不到。
 
-跑完队列会打印 `Automation Test Queue Empty 10 tests performed`，但进程不会自己退出，需要手动结束。
+跑完队列会打印 `Automation Test Queue Empty 14 tests performed`，但进程不会自己退出，需要手动结束。

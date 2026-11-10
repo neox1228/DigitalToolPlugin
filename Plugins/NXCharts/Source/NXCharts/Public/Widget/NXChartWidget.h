@@ -79,6 +79,74 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "NXCharts")
 	void SetSeriesCurve(FName SeriesKey, EChartCurveType Curve);
 
+	/** 设置图例上显示的名字（不影响 SeriesKey 的数据绑定） */
+	UFUNCTION(BlueprintCallable, Category = "NXCharts")
+	void SetSeriesDisplayName(FName SeriesKey, const FString& DisplayName);
+
+	/** 当前是否处于缩放/平移后的视图。外部复位按钮可以用它做显隐 */
+	UFUNCTION(BlueprintPure, Category = "NXCharts|Interaction")
+	bool IsViewModified() const;
+
+	// ---------------------------------------------------------------- 系列查询
+
+	UFUNCTION(BlueprintPure, Category = "NXCharts|Query")
+	bool HasSeries(FName SeriesKey) const;
+
+	/** 取一条系列的配置副本；不存在时返回默认结构（建议先用 HasSeries 判断） */
+	UFUNCTION(BlueprintPure, Category = "NXCharts|Query")
+	FChartSeriesSpec GetSeriesSpec(FName SeriesKey) const;
+
+	// ---------------------------------------------------------------- 点级增删改查
+
+	UFUNCTION(BlueprintPure, Category = "NXCharts|Query")
+	int32 GetSeriesPointCount(FName SeriesKey) const;
+
+	UFUNCTION(BlueprintPure, Category = "NXCharts|Query")
+	TArray<FVector2D> GetSeriesPoints(FName SeriesKey) const;
+
+	UFUNCTION(BlueprintPure, Category = "NXCharts|Query")
+	bool GetSeriesPointAt(FName SeriesKey, int32 Index, FVector2D& OutPoint) const;
+
+	UFUNCTION(BlueprintCallable, Category = "NXCharts|Data")
+	bool SetSeriesPointAt(FName SeriesKey, int32 Index, FVector2D Point);
+
+	UFUNCTION(BlueprintCallable, Category = "NXCharts|Data")
+	bool InsertSeriesPoint(FName SeriesKey, int32 Index, FVector2D Point);
+
+	UFUNCTION(BlueprintCallable, Category = "NXCharts|Data")
+	bool RemoveSeriesPointAt(FName SeriesKey, int32 Index);
+
+	/** 删除 X 落在 [MinX, MaxX] 闭区间内的点，返回删除数量。用于裁掉历史时间窗口 */
+	UFUNCTION(BlueprintCallable, Category = "NXCharts|Data")
+	int32 RemoveSeriesPointsInXRange(FName SeriesKey, float MinX, float MaxX);
+
+	// ---------------------------------------------------------------- 十字准星（外部驱动）
+
+	/**
+	 * 用「数据坐标」的 X 定位十字准星：吸附到最近的数据点，并显示各系列在该处的值。
+	 * 激活期间鼠标悬停让位，由调用方负责关闭。
+	 */
+	UFUNCTION(BlueprintCallable, Category = "NXCharts|Interaction")
+	void SetCrosshairX(float X);
+
+	UFUNCTION(BlueprintCallable, Category = "NXCharts|Interaction")
+	void ClearCrosshair();
+
+	UFUNCTION(BlueprintPure, Category = "NXCharts|Interaction")
+	bool IsCrosshairActive() const;
+
+	/** 供画布读取，也方便 C++ 侧查询 */
+	double GetCrosshairX() const { return CrosshairX; }
+
+	/** 十字准星吸附到数据点时广播（每条系列各一次），用于多图联动 */
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnCrosshairSnapped, FName, SeriesKey, int32, PointIndex, FVector2D, DataValue);
+
+	UPROPERTY(BlueprintAssignable, Category = "NXCharts|Events")
+	FOnCrosshairSnapped OnCrosshairSnapped;
+
+	/** 供 Slate 画布内部调用 */
+	void BroadcastCrosshairSnapped(FName SeriesKey, int32 PointIndex, FVector2D DataValue);
+
 	/** 强制重建并重绘（一般不需要手动调用） */
 	UFUNCTION(BlueprintCallable, Category = "NXCharts")
 	void RefreshChart();
@@ -163,6 +231,10 @@ protected:
 
 	/** 运行时域覆盖（缩放/平移） */
 	FChartDomainOverride DomainOverride;
+
+	/** 外部驱动的十字准星状态（数据坐标） */
+	bool bCrosshairActive = false;
+	double CrosshairX = 0.0;
 
 	int32 SpecRevision = 0;
 	int32 BuiltSpecRevision = -1;

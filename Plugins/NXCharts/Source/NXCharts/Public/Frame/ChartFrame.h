@@ -47,6 +47,28 @@ struct NXCHARTS_API FChartSeriesGeometry
  * 一帧的完整快照。
  * SChartCanvas::OnPaint 只读它；重建由 UNXChartWidget::GetFrame 按版本判断。
  */
+/** 查询辅助：鼠标悬停与外部十字准星共用同一套「最近点」逻辑，避免两处算法跑偏 */
+namespace ChartQuery
+{
+	/** 在已映射的局部坐标里找 X 最近的点；空数组返回 INDEX_NONE */
+	inline int32 FindNearestPointIndex(const TArray<FVector2d>& LocalPoints, double LocalX)
+	{
+		int32 BestIndex = INDEX_NONE;
+		double BestDistance = TNumericLimits<double>::Max();
+
+		for (int32 Index = 0; Index < LocalPoints.Num(); ++Index)
+		{
+			const double Distance = FMath::Abs(LocalPoints[Index].X - LocalX);
+			if (Distance < BestDistance)
+			{
+				BestDistance = Distance;
+				BestIndex = Index;
+			}
+		}
+
+		return BestIndex;
+	}
+}
 struct NXCHARTS_API FChartFrame
 {
 	FChartSpec Spec;

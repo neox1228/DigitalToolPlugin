@@ -194,6 +194,175 @@ void UNXChartWidget::SetSeriesCurve(FName SeriesKey, EChartCurveType Curve)
 	MarkSpecDirty();
 }
 
+void UNXChartWidget::SetSeriesDisplayName(FName SeriesKey, const FString& DisplayName)
+{
+	FChartSeriesSpec* Existing = Spec.FindSeriesMutable(SeriesKey);
+	if (!Existing)
+	{
+		return;
+	}
+
+	const FText NewName = FText::FromString(DisplayName);
+	if (Existing->DisplayName.EqualTo(NewName))
+	{
+		return;
+	}
+
+	Existing->DisplayName = NewName;
+	MarkSpecDirty();
+}
+
+bool UNXChartWidget::IsViewModified() const
+{
+	return DomainOverride.HasAny();
+}
+
+// ---------------------------------------------------------------------------- 系列查询
+
+bool UNXChartWidget::HasSeries(FName SeriesKey) const
+{
+	return Spec.FindSeries(SeriesKey) != nullptr;
+}
+
+FChartSeriesSpec UNXChartWidget::GetSeriesSpec(FName SeriesKey) const
+{
+	if (const FChartSeriesSpec* Existing = Spec.FindSeries(SeriesKey))
+	{
+		return *Existing;
+	}
+	return FChartSeriesSpec();
+}
+
+// ---------------------------------------------------------------------------- 点级增删改查
+
+int32 UNXChartWidget::GetSeriesPointCount(FName SeriesKey) const
+{
+	const FChartSeriesBuffer* Buffer = DataPool.Find(SeriesKey);
+	return Buffer ? Buffer->Num() : 0;
+}
+
+TArray<FVector2D> UNXChartWidget::GetSeriesPoints(FName SeriesKey) const
+{
+	TArray<FVector2D> Result;
+	if (const FChartSeriesBuffer* Buffer = DataPool.Find(SeriesKey))
+	{
+		Result = Buffer->GetPoints();
+	}
+	return Result;
+}
+
+bool UNXChartWidget::GetSeriesPointAt(FName SeriesKey, int32 Index, FVector2D& OutPoint) const
+{
+	const FChartSeriesBuffer* Buffer = DataPool.Find(SeriesKey);
+	const FVector2d* Point = Buffer ? Buffer->GetPointAt(Index) : nullptr;
+	if (!Point)
+	{
+		return false;
+	}
+
+	OutPoint = *Point;
+	return true;
+}
+
+bool UNXChartWidget::SetSeriesPointAt(FName SeriesKey, int32 Index, FVector2D Point)
+{
+	FChartSeriesBuffer* Buffer = DataPool.FindMutable(SeriesKey);
+	if (!Buffer || !Buffer->SetPointAt(Index, Point))
+	{
+		return false;
+	}
+
+	InvalidateChart();
+	return true;
+}
+
+bool UNXChartWidget::InsertSeriesPoint(FName SeriesKey, int32 Index, FVector2D Point)
+{
+	FChartSeriesBuffer* Buffer = DataPool.FindMutable(SeriesKey);
+	if (!Buffer || !Buffer->InsertPoint(Index, Point))
+	{
+		return false;
+	}
+
+	InvalidateChart();
+	return true;
+}
+
+bool UNXChartWidget::RemoveSeriesPointAt(FName SeriesKey, int32 Index)
+{
+	FChartSeriesBuffer* Buffer = DataPool.FindMutable(SeriesKey);
+	if (!Buffer || !Buffer->RemovePointAt(Index))
+	{
+		return false;
+	}
+
+	InvalidateChart();
+	return true;
+}
+
+int32 UNXChartWidget::RemoveSeriesPointsInXRange(FName SeriesKey, float MinX, float MaxX)
+{
+	FChartSeriesBuffer* Buffer = DataPool.FindMutable(SeriesKey);
+	if (!Buffer)
+	{
+		return 0;
+	}
+
+	const int32 Removed = Buffer->RemovePointsInXRange(MinX, MaxX);
+	if (Removed > 0)
+	{
+		InvalidateChart();
+	}
+	return Removed;
+}
+
+// ---------------------------------------------------------------------------- 十字准星
+
+void UNXChartWidget::SetCrosshairX(float X)
+{
+	CrosshairX = X;
+	bCrosshairActive = true;
+	InvalidateChart();
+
+	// 用当前帧做一次吸附并广播（多图联动用）。帧还没建好时跳过，绘制时会自然显示。
+	if (!CachedFrame.bValid)
+	{
+		return;
+	}
+
+	const double LocalX = CachedFrame.Space.DataXToLocal(X);
+	for (const FChartSeriesGeometry& Geometry : CachedFrame.Series)
+	{
+		const int32 Index = ChartQuery::FindNearestPointIndex(Geometry.LocalPoints, LocalX);
+		if (Index != INDEX_NONE)
+		{
+			const FVector2D Value = CachedFrame.Space.LocalToData(Geometry.LocalPoints[Index]);
+			OnCrosshairSnapped.Broadcast(Geometry.SeriesKey, Index, Value);
+		}
+	}
+}
+
+void UNXChartWidget::ClearCrosshair()
+{
+	if (!bCrosshairActive)
+	{
+		return;
+	}
+
+	bCrosshairActive = false;
+	InvalidateChart();
+}
+
+bool UNXChartWidget::IsCrosshairActive() const
+{
+	return bCrosshairActive;
+}
+
+void UNXChartWidget::BroadcastCrosshairSnapped(FName SeriesKey, int32 PointIndex, FVector2D DataValue)
+{
+	OnCrosshairSnapped.Broadcast(SeriesKey, PointIndex, DataValue);
+}
+
 // ---------------------------------------------------------------------------- 运行时数据
 
 void UNXChartWidget::SetSeriesPoints(FName SeriesKey, const TArray<FVector2D>& Points)

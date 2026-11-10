@@ -66,6 +66,71 @@ void FChartSeriesBuffer::TrimToCapacity()
 	}
 }
 
+// ---------------------------------------------------------------------------- 点级 CRUD
+
+const FVector2d* FChartSeriesBuffer::GetPointAt(int32 Index) const
+{
+	return Points.IsValidIndex(Index) ? &Points[Index] : nullptr;
+}
+
+bool FChartSeriesBuffer::SetPointAt(int32 Index, const FVector2d& Point)
+{
+	if (!Points.IsValidIndex(Index))
+	{
+		return false;
+	}
+
+	Points[Index] = Point;
+	++Revision;
+	return true;
+}
+
+bool FChartSeriesBuffer::InsertPoint(int32 Index, const FVector2d& Point)
+{
+	if (Index < 0 || Index > Points.Num())
+	{
+		return false;
+	}
+
+	Points.Insert(Point, Index);
+	TrimToCapacity();
+	++Revision;
+	return true;
+}
+
+bool FChartSeriesBuffer::RemovePointAt(int32 Index)
+{
+	if (!Points.IsValidIndex(Index))
+	{
+		return false;
+	}
+
+	Points.RemoveAt(Index);
+	++Revision;
+	return true;
+}
+
+int32 FChartSeriesBuffer::RemovePointsInXRange(double MinX, double MaxX)
+{
+	if (Points.Num() == 0 || MinX > MaxX)
+	{
+		return 0;
+	}
+
+	const int32 Before = Points.Num();
+	Points.RemoveAll([MinX, MaxX](const FVector2d& Point)
+	{
+		return Point.X >= MinX && Point.X <= MaxX;
+	});
+
+	const int32 Removed = Before - Points.Num();
+	if (Removed > 0)
+	{
+		++Revision;
+	}
+	return Removed;
+}
+
 // ---------------------------------------------------------------------------- FChartSeriesDataPool
 
 FChartSeriesBuffer& FChartSeriesDataPool::FindOrAdd(FName Key)

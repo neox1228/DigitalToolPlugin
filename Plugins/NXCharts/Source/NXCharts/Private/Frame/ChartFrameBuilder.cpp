@@ -12,6 +12,34 @@ namespace
 	/** 曲线细分后的顶点上限，防御异常数据把 Slate 拖死 */
 	constexpr int32 MaxCurvePoints = 20000;
 
+	/** 把域夹进轴的硬限制区间；数据完全落在区间外时退回展示整个区间 */
+	FChartDomain ClampToHardLimits(FChartDomain Domain, const FChartAxisSpec& AxisSpec)
+	{
+		if (!AxisSpec.bUseHardLimits)
+		{
+			return Domain;
+		}
+
+		const double Lower = FMath::Min(AxisSpec.HardLimits.X, AxisSpec.HardLimits.Y);
+		const double Upper = FMath::Max(AxisSpec.HardLimits.X, AxisSpec.HardLimits.Y);
+		if (Upper - Lower <= KINDA_SMALL_NUMBER)
+		{
+			return Domain;
+		}
+
+		Domain.Min = FMath::Max(Domain.Min, Lower);
+		Domain.Max = FMath::Min(Domain.Max, Upper);
+
+		if (Domain.Max - Domain.Min <= KINDA_SMALL_NUMBER)
+		{
+			Domain.Min = Lower;
+			Domain.Max = Upper;
+		}
+
+		Domain.bValid = true;
+		return Domain;
+	}
+
 	bool DomainEqual(const FChartDomain& A, const FChartDomain& B)
 	{
 		if (A.bValid != B.bValid)
@@ -90,17 +118,17 @@ FChartDomain FChartFrameBuilder::ResolveDomain(EChartAxis Axis, const FChartAxis
 	// 1) 运行时覆盖（缩放 / 平移）优先级最高
 	if (bXAxis && Override.bOverrideX)
 	{
-		return FChartDomain::FromRange(Override.XRange.X, Override.XRange.Y);
+		return ClampToHardLimits(FChartDomain::FromRange(Override.XRange.X, Override.XRange.Y), AxisSpec);
 	}
 	if (!bXAxis && Override.bOverrideY)
 	{
-		return FChartDomain::FromRange(Override.YRange.X, Override.YRange.Y);
+		return ClampToHardLimits(FChartDomain::FromRange(Override.YRange.X, Override.YRange.Y), AxisSpec);
 	}
 
 	// 2) 配置里写死的范围
 	if (AxisSpec.DomainMode == EChartDomainMode::Manual)
 	{
-		return FChartDomain::FromRange(AxisSpec.ManualDomain.X, AxisSpec.ManualDomain.Y);
+		return ClampToHardLimits(FChartDomain::FromRange(AxisSpec.ManualDomain.X, AxisSpec.ManualDomain.Y), AxisSpec);
 	}
 
 	// 3) 自动推导
@@ -144,7 +172,7 @@ FChartDomain FChartFrameBuilder::ResolveDomain(EChartAxis Axis, const FChartAxis
 		Domain.Pad(0.05);
 	}
 
-	return Domain;
+	return ClampToHardLimits(Domain, AxisSpec);
 }
 
 bool FChartFrameBuilder::Build(const FChartSpec& Spec, const FChartSeriesDataPool& Data,

@@ -14,6 +14,57 @@ namespace
 	constexpr double LegendMarkerSize = 10.0;
 	constexpr double LegendMarkerGap = 5.0;
 
+	/**
+	 * 把缩放结果夹进轴的取值范围限制。
+	 * @param CurrentDomain 当前正在显示的域（判定基准，不能传缩放结果）
+	 * @return false 表示夹紧后与当前域相同（已顶死在边界），这次缩放应被忽略
+	 */
+	bool ApplyHardLimits(const FChartAxisSpec& AxisSpec, const FChartDomain& CurrentDomain, FChartDomain& Domain)
+	{
+		if (!AxisSpec.bUseHardLimits)
+		{
+			return true;
+		}
+
+		const double Lower = FMath::Min(AxisSpec.HardLimits.X, AxisSpec.HardLimits.Y);
+		const double Upper = FMath::Max(AxisSpec.HardLimits.X, AxisSpec.HardLimits.Y);
+		return ChartDomainUtil::ClampDomainToRange(Domain, Lower, Upper, CurrentDomain);
+	}
+
+	/** 提示框里系列名的最大宽度（超过就缩字号，避免把提示框撑爆） */
+	constexpr double MaxTooltipNameWidth = 140.0;
+
+	/**
+	 * 文字超宽时缩小字号来适配，等价于 UMG 里 Text 外套 SizeBox -> ScaleBox 的效果。
+	 * FSlateFontInfo::Size 是公开的 float，复制一份改小即可，仍走同一套字体资源。
+	 * @param OutWidth 输出实际测量宽度（用于计算提示框尺寸）
+	 */
+	FSlateFontInfo FitFontToWidth(const FSlateFontInfo& BaseFont, const FString& Text,
+	                              double MaxWidth, double& OutWidth)
+	{
+		OutWidth = FChartPaintContext::MeasureText(Text, BaseFont).X;
+		if (OutWidth <= MaxWidth || MaxWidth <= 1.0)
+		{
+			return BaseFont;
+		}
+
+		FSlateFontInfo Fitted = BaseFont;
+		double Scale = MaxWidth / OutWidth;
+
+		// 字号和宽度不是严格线性（受 hinting/行距影响），迭代几次收敛
+		for (int32 Attempt = 0; Attempt < 3; ++Attempt)
+		{
+			Fitted.Size = FMath::Max(6.0f, static_cast<float>(Fitted.Size * Scale));
+			OutWidth = FChartPaintContext::MeasureText(Text, Fitted).X;
+			if (OutWidth <= MaxWidth)
+			{
+				break;
+			}
+			Scale = MaxWidth / OutWidth;
+		}
+
+		return Fitted;
+	}
 	/** 图例命中：矩形来自布局阶段，与绘制共用同一份结果 */
 	FName FindLegendItemAt(const FChartFrame& Frame, const FVector2D& LocalPosition)
 	{
@@ -389,10 +440,24 @@ FReply SChartCanvas::OnMouseButtonDown(const FGeometry& MyGeometry, const FPoint
 
 	const FVector2D LocalPosition = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
 
-	// 左键：点图例切换该系列的显隐
+	// 左键：双击绘图区复位视图；单击图例切换显隐
 	if (MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
 	{
 		const FChartFrame& CurrentFrame = Widget->GetFrame(MyGeometry.GetLocalSize());
+
+		// 双击判定：350ms 内、8 像素以内
+		const double Now = FPlatformTime::Seconds();
+		const bool bDoubleClick = (Now - LastClickTime) < 0.35
+			&& FVector2D::Distance(LocalPosition, LastClickPosition) < 8.0;
+		LastClickTime = Now;
+		LastClickPosition = LocalPosition;
+
+		if (bDoubleClick && CurrentFrame.bValid && CurrentFrame.Layout.PlotRect.IsInside(LocalPosition))
+		{
+			Widget->ClearDomainOverride();
+			return FReply::Handled();
+		}
+
 		const FName LegendKey = FindLegendItemAt(CurrentFrame, LocalPosition);
 		if (!LegendKey.IsNone())
 		{
@@ -477,8 +542,15 @@ FReply SChartCanvas::OnMouseWheel(const FGeometry& MyGeometry, const FPointerEve
 		return Result;
 	};
 
-	const FChartDomain XDomain = ZoomDomain(Frame.Space.GetXDomain(), Anchor.X, Factor);
-	const FChartDomain YDomain = ZoomDomain(Frame.Space.GetYDomain(), Anchor.Y, Factor);
+	FChartDomain XDomain = ZoomDomain(Frame.Space.GetXDomain(), Anchor.X, Factor);
+	FChartDomain YDomain = ZoomDomain(Frame.Space.GetYDomain(), Anchor.Y, Factor);
+
+	// 顶到轴的取值范围限制就不再继续缩放（判定基准是当前显示的域）
+	if (!ApplyHardLimits(Frame.Spec.AxisX, Frame.Space.GetXDomain(), XDomain)
+		|| !ApplyHardLimits(Frame.Spec.AxisY, Frame.Space.GetYDomain(), YDomain))
+	{
+		return FReply::Handled();
+	}
 
 	FChartDomainOverride Override = Widget->GetDomainOverride();
 	Override.bOverrideX = true;
@@ -492,7 +564,11 @@ FReply SChartCanvas::OnMouseWheel(const FGeometry& MyGeometry, const FPointerEve
 
 void SChartCanvas::PaintHover(FChartPaintContext& Ctx, const FChartFrame& Frame) const
 {
-	if (!bHoverActive || !Frame.bValid)
+	UNXChartWidget* Widget = Owner.Get();
+	const bool bExternal = (Widget != nullptr) && Widget->IsCrosshairActive();
+
+	// 外部十字准星优先：激活期间鼠标悬停让位，避免两条竖线打架
+	if ((!bExternal && !bHoverActive) || !Frame.bValid)
 	{
 		return;
 	}
@@ -500,21 +576,34 @@ void SChartCanvas::PaintHover(FChartPaintContext& Ctx, const FChartFrame& Frame)
 	const FChartLayout& Layout = Frame.Layout;
 	const FBox2D& Plot = Layout.PlotRect;
 
+	// 竖线位置：外部用数据 X 映射，鼠标用光标局部 X
+	const double LocalX = bExternal ? Frame.Space.DataXToLocal(Widget->GetCrosshairX()) : HoverLocal.X;
+	if (LocalX < Plot.Min.X || LocalX > Plot.Max.X)
+	{
+		return;
+	}
+
 	const FChartOptionsSpec& Opt = Frame.Spec.Options;
 	const FLinearColor& AxisColor = Opt.AxisColor;
 	const FLinearColor& TitleColor = Opt.TitleColor;
 	const FLinearColor& LabelColor = Opt.LabelColor;
 
 	// ---- 十字准线
-	Ctx.DrawDashedLine(FVector2D(HoverLocal.X, Plot.Min.Y), FVector2D(HoverLocal.X, Plot.Max.Y),
+	Ctx.DrawDashedLine(FVector2D(LocalX, Plot.Min.Y), FVector2D(LocalX, Plot.Max.Y),
 	                   4.0f, 4.0f, CrosshairColor, 1.0f);
 
 	// ---- 每条系列上的最近点 + 提示行
-	TArray<FLinearColor> RowColors;
-	TArray<FString> RowTexts;
+	struct FTooltipRow
+	{
+		FLinearColor Color = FLinearColor::White;
+		FString Name;
+		FString Value;
+		FSlateFontInfo NameFont;
+		double NameWidth = 0.0;
+		double ValueWidth = 0.0;
+	};
 
-	double MaxRowWidth = 0.0;
-	double RowHeight = 0.0;
+	TArray<FTooltipRow> Rows;
 
 	for (const FChartSeriesGeometry& Series : Frame.Series)
 	{
@@ -523,18 +612,8 @@ void SChartCanvas::PaintHover(FChartPaintContext& Ctx, const FChartFrame& Frame)
 			continue;
 		}
 
-		int32 BestIndex = INDEX_NONE;
-		double BestDistance = TNumericLimits<double>::Max();
-		for (int32 Index = 0; Index < Series.LocalPoints.Num(); ++Index)
-		{
-			const double Distance = FMath::Abs(Series.LocalPoints[Index].X - HoverLocal.X);
-			if (Distance < BestDistance)
-			{
-				BestDistance = Distance;
-				BestIndex = Index;
-			}
-		}
-
+		// 与外部准星共用同一套最近点算法
+		const int32 BestIndex = ChartQuery::FindNearestPointIndex(Series.LocalPoints, LocalX);
 		if (BestIndex == INDEX_NONE)
 		{
 			continue;
@@ -545,44 +624,70 @@ void SChartCanvas::PaintHover(FChartPaintContext& Ctx, const FChartFrame& Frame)
 
 		Ctx.DrawCircle(PointLocal, 3.5f, Series.Color, 2.0f, 12);
 
-		const FString Text = FString::Printf(TEXT("%s   %s"), *Series.SeriesKey.ToString(),
-			*FormatValueWithStep(Value.Y, Layout.YAxis.TickSet.Step, Frame.Spec.AxisY.Format));
+		// 名字用 DisplayName（留空回退 SeriesKey），过长则自动缩字号
+		const FChartSeriesSpec* SeriesSpec = Frame.Spec.FindSeries(Series.SeriesKey);
+		const FString Label = SeriesSpec ? SeriesSpec->GetLegendLabel() : Series.SeriesKey.ToString();
 
-		MaxRowWidth = FMath::Max(MaxRowWidth, FChartPaintContext::MeasureText(Text, Layout.AxisLabelFont).X);
-		RowHeight = FMath::Max(RowHeight, FChartPaintContext::MeasureText(TEXT("Ag"), Layout.AxisLabelFont).Y);
-
-		RowColors.Add(Series.Color);
-		RowTexts.Add(Text);
+		FTooltipRow& Row = Rows.AddDefaulted_GetRef();
+		Row.Color = Series.Color;
+		Row.Name = Label;
+		Row.Value = FormatValueWithStep(Value.Y, Layout.YAxis.TickSet.Step, Frame.Spec.AxisY.Format);
+		Row.NameFont = FitFontToWidth(Layout.AxisLabelFont, Label, MaxTooltipNameWidth, Row.NameWidth);
+		Row.ValueWidth = FChartPaintContext::MeasureText(Row.Value, Layout.AxisLabelFont).X;
 	}
 
-	if (RowTexts.Num() == 0)
+	if (Rows.Num() == 0)
 	{
 		return;
 	}
 
-	// ---- 表头：悬停位置的 X 值
-	const FVector2D HoverData = Frame.Space.LocalToData(FVector2D(HoverLocal.X, HoverLocal.Y));
-	const FString Header = FormatValueWithStep(HoverData.X, Layout.XAxis.TickSet.Step, Frame.Spec.AxisX.Format);
+	// ---- 表头：悬停位置的 X 值。外部准星直接显示传入值，避免像素往返丢精度
+	const double HeaderValue = bExternal
+		? Widget->GetCrosshairX()
+		: Frame.Space.LocalToData(FVector2D(HoverLocal.X, HoverLocal.Y)).X;
+	const FString Header = FormatValueWithStep(HeaderValue, Layout.XAxis.TickSet.Step, Frame.Spec.AxisX.Format);
 	const FVector2D HeaderSize = FChartPaintContext::MeasureText(Header, Layout.AxisLabelFont);
-	MaxRowWidth = FMath::Max(MaxRowWidth, HeaderSize.X);
 
 	constexpr double Padding = 8.0;
 	constexpr double SwatchSize = 10.0;
 	constexpr double SwatchGap = 6.0;
+	constexpr double NameValueGap = 10.0;
 
-	const double BoxWidth = MaxRowWidth + SwatchSize + SwatchGap + Padding * 2.0;
-	const double BoxHeight = HeaderSize.Y + Padding * 2.0 + RowHeight * RowTexts.Num();
+	double MaxNameWidth = 0.0;
+	double MaxValueWidth = 0.0;
+	double RowHeight = 0.0;
 
-	// 优先放光标右侧，越界则翻到左侧，再不行就贴边
-	double BoxX = HoverLocal.X + 14.0;
+	for (const FTooltipRow& Row : Rows)
+	{
+		MaxNameWidth = FMath::Max(MaxNameWidth, Row.NameWidth);
+		MaxValueWidth = FMath::Max(MaxValueWidth, Row.ValueWidth);
+		RowHeight = FMath::Max(RowHeight, FChartPaintContext::MeasureText(TEXT("Ag"), Layout.AxisLabelFont).Y);
+	}
+
+	const double RowContentWidth = SwatchSize + SwatchGap + MaxNameWidth + NameValueGap + MaxValueWidth;
+	const double ContentWidth = FMath::Max(HeaderSize.X, RowContentWidth);
+	const double BoxWidth = ContentWidth + Padding * 2.0;
+	const double BoxHeight = HeaderSize.Y + Padding * 2.0 + RowHeight * Rows.Num();
+
+	// ---- 定位：优先放竖线右侧，越界翻到左侧，再不行贴边
+	double BoxX = LocalX + 14.0;
 	if (BoxX + BoxWidth > Plot.Max.X)
 	{
-		BoxX = HoverLocal.X - 14.0 - BoxWidth;
+		BoxX = LocalX - 14.0 - BoxWidth;
 	}
 	BoxX = FMath::Clamp(BoxX, Plot.Min.X, FMath::Max(Plot.Min.X, Plot.Max.X - BoxWidth));
 
-	double BoxY = HoverLocal.Y - BoxHeight * 0.5;
-	BoxY = FMath::Clamp(BoxY, Plot.Min.Y, FMath::Max(Plot.Min.Y, Plot.Max.Y - BoxHeight));
+	double BoxY;
+	if (bExternal)
+	{
+		// 外部准星没有光标：信息框固定贴在绘图区顶部，跟随竖线横移
+		BoxY = Plot.Min.Y + 8.0;
+	}
+	else
+	{
+		BoxY = HoverLocal.Y - BoxHeight * 0.5;
+		BoxY = FMath::Clamp(BoxY, Plot.Min.Y, FMath::Max(Plot.Min.Y, Plot.Max.Y - BoxHeight));
+	}
 
 	const FVector2D BoxMin(BoxX, BoxY);
 
@@ -593,11 +698,17 @@ void SChartCanvas::PaintHover(FChartPaintContext& Ctx, const FChartFrame& Frame)
 	             EChartTextHAlign::Left, EChartTextVAlign::Top);
 
 	double RowY = BoxMin.Y + Padding + HeaderSize.Y;
-	for (int32 RowIndex = 0; RowIndex < RowTexts.Num(); ++RowIndex)
+	for (const FTooltipRow& Row : Rows)
 	{
-		Ctx.DrawRect(FVector2D(BoxMin.X + Padding, RowY + 3.0), FVector2D(SwatchSize, SwatchSize), RowColors[RowIndex]);
-		Ctx.DrawText(RowTexts[RowIndex], FVector2D(BoxMin.X + Padding + SwatchSize + SwatchGap, RowY),
-		             Layout.AxisLabelFont, LabelColor, EChartTextHAlign::Left, EChartTextVAlign::Top);
+		Ctx.DrawRect(FVector2D(BoxMin.X + Padding, RowY + 3.0), FVector2D(SwatchSize, SwatchSize), Row.Color);
+
+		// 名字左对齐（可能缩过字号），数值右对齐，方便纵向比对
+		Ctx.DrawText(Row.Name, FVector2D(BoxMin.X + Padding + SwatchSize + SwatchGap, RowY),
+		             Row.NameFont, LabelColor, EChartTextHAlign::Left, EChartTextVAlign::Top);
+
+		Ctx.DrawText(Row.Value, FVector2D(BoxMin.X + BoxWidth - Padding, RowY),
+		             Layout.AxisLabelFont, LabelColor, EChartTextHAlign::Right, EChartTextVAlign::Top);
+
 		RowY += RowHeight;
 	}
 }

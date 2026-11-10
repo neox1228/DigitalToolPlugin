@@ -34,6 +34,23 @@ struct NXCHARTS_API FChartSeriesBuffer
 	/** 超出 Capacity 时裁剪队首 */
 	void TrimToCapacity();
 
+	// ---- 点级增删改查（全部会递增 Revision，触发几何重建） ----
+
+	/** 按下标取点；越界返回 nullptr */
+	const FVector2d* GetPointAt(int32 Index) const;
+
+	/** 按下标改点 */
+	bool SetPointAt(int32 Index, const FVector2d& Point);
+
+	/** 在 Index 处插入（Index == Num() 表示追加到末尾） */
+	bool InsertPoint(int32 Index, const FVector2d& Point);
+
+	/** 按下标删点 */
+	bool RemovePointAt(int32 Index);
+
+	/** 删除 X 落在 [MinX, MaxX] 闭区间内的点，返回删除数量。用于裁掉历史时间窗口 */
+	int32 RemovePointsInXRange(double MinX, double MaxX);
+
 	int32 Num() const { return Points.Num(); }
 	const TArray<FVector2d>& GetPoints() const { return Points; }
 

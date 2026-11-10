@@ -105,6 +105,36 @@ FChartDomain FChartDomain::FromRange(double InMin, double InMax)
 	return Domain;
 }
 
+// ---------------------------------------------------------------------------- ChartDomainUtil
+
+bool ChartDomainUtil::ClampDomainToRange(FChartDomain& Domain, double Lower, double Upper, const FChartDomain& Current)
+{
+	if (Upper - Lower <= KINDA_SMALL_NUMBER)
+	{
+		// 限制区间本身无效，不夹
+		return true;
+	}
+
+	Domain.Min = FMath::Max(Domain.Min, Lower);
+	Domain.Max = FMath::Min(Domain.Max, Upper);
+
+	if (Domain.Max - Domain.Min <= KINDA_SMALL_NUMBER)
+	{
+		// 整体被夹没了：退化成展示整个限制区间
+		Domain.Min = Lower;
+		Domain.Max = Upper;
+	}
+
+	Domain.bValid = true;
+
+	// 与「当前显示域」相比没有任何变化，说明已经顶死在边界
+	const double Tolerance = FMath::Max(KINDA_SMALL_NUMBER, (Upper - Lower) * 1e-9);
+	const bool bUnchanged = FMath::Abs(Domain.Min - Current.Min) <= Tolerance
+		&& FMath::Abs(Domain.Max - Current.Max) <= Tolerance;
+
+	return !bUnchanged;
+}
+
 // ---------------------------------------------------------------------------- FChartCartesianSpace
 
 void FChartCartesianSpace::Setup(const FChartDomain& InXDomain, const FChartDomain& InYDomain, const FBox2D& InPlotRect)

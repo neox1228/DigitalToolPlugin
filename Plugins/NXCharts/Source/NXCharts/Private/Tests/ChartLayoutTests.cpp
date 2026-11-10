@@ -547,4 +547,171 @@ bool FNXChartsLegendLayoutTest::RunTest(const FString&)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FNXChartsHardLimitsTest, "NXCharts.Frame.HardLimits",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FNXChartsHardLimitsTest::RunTest(const FString&)
+{
+	FChartSeriesDataPool Data;
+	{
+		TArray<FVector2d> Points;
+		Points.Add(FVector2d(0.0, 0.0));
+		Points.Add(FVector2d(100.0, 1500.0));
+		Data.FindOrAdd(TEXT("A")).SetPoints(Points);
+	}
+
+	FChartSpec Spec;
+	FChartSeriesSpec SeriesSpec;
+	SeriesSpec.SeriesKey = TEXT("A");
+	Spec.Series.Add(SeriesSpec);
+
+	// 数据 0~1500，自动域带 5% padding 会变成 -75~1575：这就是负刻度的来源
+	const FChartDomain Unclamped = FChartFrameBuilder::ResolveDomain(
+		EChartAxis::Y, Spec.AxisY, Spec, Data, FChartDomainOverride());
+	TestTrue(TEXT("自动域默认会向下溢出到负数"), Unclamped.Min < 0.0);
+
+	// 打开取值范围限制后不允许小于 0
+	Spec.AxisY.bUseHardLimits = true;
+	Spec.AxisY.HardLimits = FVector2D(0.0, 1500.0);
+
+	const FChartDomain Clamped = FChartFrameBuilder::ResolveDomain(
+		EChartAxis::Y, Spec.AxisY, Spec, Data, FChartDomainOverride());
+	TestEqual(TEXT("自动域下界被夹到 0"), Clamped.Min, 0.0, 1e-6);
+	TestEqual(TEXT("自动域上界被夹到 1500"), Clamped.Max, 1500.0, 1e-6);
+
+	// 缩放产生的运行时覆盖同样要被夹住（防止越缩越远）
+	FChartDomainOverride Override;
+	Override.bOverrideY = true;
+	Override.YRange = FVector2D(-3000.0, 4500.0);
+
+	const FChartDomain OverrideClamped = FChartFrameBuilder::ResolveDomain(
+		EChartAxis::Y, Spec.AxisY, Spec, Data, Override);
+	TestEqual(TEXT("缩放覆盖同样被夹住下界"), OverrideClamped.Min, 0.0, 1e-6);
+	TestEqual(TEXT("缩放覆盖同样被夹住上界"), OverrideClamped.Max, 1500.0, 1e-6);
+
+	// 只限一根轴时，另一根轴不受影响
+	const FChartDomain XUnaffected = FChartFrameBuilder::ResolveDomain(
+		EChartAxis::X, Spec.AxisX, Spec, Data, FChartDomainOverride());
+	TestTrue(TEXT("X 轴未配置限制时保持自动域"), XUnaffected.Max >= 100.0);
+
+	// 数据完全落在限制区之外：退回展示整个限制区间，而不是空白
+	Spec.AxisY.HardLimits = FVector2D(5000.0, 6000.0);
+	const FChartDomain Outside = FChartFrameBuilder::ResolveDomain(
+		EChartAxis::Y, Spec.AxisY, Spec, Data, FChartDomainOverride());
+	TestEqual(TEXT("数据全在区外时退回限制区间下界"), Outside.Min, 5000.0, 1e-6);
+	TestEqual(TEXT("数据全在区外时退回限制区间上界"), Outside.Max, 6000.0, 1e-6);
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FNXChartsPointCrudTest, "NXCharts.Data.PointCrud",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FNXChartsPointCrudTest::RunTest(const FString&)
+{
+	FChartSeriesBuffer Buffer;
+	{
+		TArray<FVector2d> Points;
+		Points.Add(FVector2d(0.0, 0.0));
+		Points.Add(FVector2d(1.0, 10.0));
+		Points.Add(FVector2d(2.0, 20.0));
+		Buffer.SetPoints(Points);
+	}
+
+	const int32 RevisionAfterSet = Buffer.Revision;
+
+	// ---- 查
+	TestEqual(TEXT("点数"), Buffer.Num(), 3);
+	TestTrue(TEXT("按下标可取点"), Buffer.GetPointAt(1) != nullptr);
+	TestTrue(TEXT("取到的值正确"), Buffer.GetPointAt(1) && FMath::IsNearlyEqual(Buffer.GetPointAt(1)->Y, 10.0));
+	TestTrue(TEXT("越界返回空"), Buffer.GetPointAt(99) == nullptr);
+
+	// ---- 改
+	TestTrue(TEXT("改点成功"), Buffer.SetPointAt(1, FVector2d(1.0, 15.0)));
+	TestTrue(TEXT("改点后值更新"), FMath::IsNearlyEqual(Buffer.GetPointAt(1)->Y, 15.0));
+	TestTrue(TEXT("改点使版本递增"), Buffer.Revision > RevisionAfterSet);
+	TestFalse(TEXT("越界改点失败"), Buffer.SetPointAt(99, FVector2d::ZeroVector));
+
+	// ---- 增
+	TestTrue(TEXT("插入成功"), Buffer.InsertPoint(1, FVector2d(0.5, 5.0)));
+	TestEqual(TEXT("插入后点数"), Buffer.Num(), 4);
+	TestTrue(TEXT("插入位置正确"), Buffer.GetPointAt(1) && FMath::IsNearlyEqual(Buffer.GetPointAt(1)->X, 0.5));
+	TestFalse(TEXT("越界插入失败"), Buffer.InsertPoint(99, FVector2d::ZeroVector));
+
+	// ---- 删
+	TestTrue(TEXT("按下标删除"), Buffer.RemovePointAt(1));
+	TestEqual(TEXT("删除后点数"), Buffer.Num(), 3);
+	TestFalse(TEXT("越界删除失败"), Buffer.RemovePointAt(99));
+
+	// ---- 按 X 区间批量删（裁历史窗口）
+	TestEqual(TEXT("区间删除数量"), Buffer.RemovePointsInXRange(0.0, 1.0), 2);
+	TestEqual(TEXT("区间删除后剩余"), Buffer.Num(), 1);
+	TestEqual(TEXT("空区间不删"), Buffer.RemovePointsInXRange(5.0, 6.0), 0);
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FNXChartsNearestPointTest, "NXCharts.Frame.NearestPoint",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FNXChartsNearestPointTest::RunTest(const FString&)
+{
+	TArray<FVector2d> LocalPoints;
+	LocalPoints.Add(FVector2d(0.0, 0.0));
+	LocalPoints.Add(FVector2d(10.0, 0.0));
+	LocalPoints.Add(FVector2d(20.0, 0.0));
+
+	TestEqual(TEXT("命中中间点"), ChartQuery::FindNearestPointIndex(LocalPoints, 9.0), 1);
+	TestEqual(TEXT("偏左侧仍命中中间"), ChartQuery::FindNearestPointIndex(LocalPoints, 6.0), 1);
+	TestEqual(TEXT("命中首点"), ChartQuery::FindNearestPointIndex(LocalPoints, -50.0), 0);
+	TestEqual(TEXT("命中末点"), ChartQuery::FindNearestPointIndex(LocalPoints, 100.0), 2);
+
+	const TArray<FVector2d> Empty;
+	TestEqual(TEXT("空数组返回 INDEX_NONE"), ChartQuery::FindNearestPointIndex(Empty, 5.0), static_cast<int32>(INDEX_NONE));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FNXChartsDomainClampTest, "NXCharts.Layout.Clamp",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FNXChartsDomainClampTest::RunTest(const FString&)
+{
+	const FChartDomain AtLimits = FChartDomain::FromRange(0.0, 1500.0);
+	const FChartDomain ZoomedIn = FChartDomain::FromRange(300.0, 1200.0);
+
+	// 1) 限制内放大：必须被接受（旧实现的 bug 就出在这里）
+	FChartDomain Domain = ZoomedIn;
+	TestTrue(TEXT("限制内放大应被接受"), ChartDomainUtil::ClampDomainToRange(Domain, 0.0, 1500.0, AtLimits));
+	TestEqual(TEXT("放大后下界保持"), Domain.Min, 300.0, 1e-6);
+	TestEqual(TEXT("放大后上界保持"), Domain.Max, 1200.0, 1e-6);
+
+	// 2) 越界缩小：接受一次并夹到边界
+	FChartDomain ZoomOut = FChartDomain::FromRange(-500.0, 2000.0);
+	TestTrue(TEXT("越界缩小应被接受并夹紧"),
+		ChartDomainUtil::ClampDomainToRange(ZoomOut, 0.0, 1500.0, ZoomedIn));
+	TestEqual(TEXT("夹到限制下界"), ZoomOut.Min, 0.0, 1e-6);
+	TestEqual(TEXT("夹到限制上界"), ZoomOut.Max, 1500.0, 1e-6);
+
+	// 3) 已经顶死在边界：再缩应被拒绝
+	FChartDomain Again = FChartDomain::FromRange(-100.0, 1700.0);
+	TestFalse(TEXT("顶死边界时拒绝继续缩小"),
+		ChartDomainUtil::ClampDomainToRange(Again, 0.0, 1500.0, AtLimits));
+
+	// 4) 数据整体落在限制区之外：退化成整个限制区间
+	FChartDomain Outside = FChartDomain::FromRange(5000.0, 6000.0);
+	TestTrue(TEXT("完全区外时退化并接受"),
+		ChartDomainUtil::ClampDomainToRange(Outside, 0.0, 1500.0, ZoomedIn));
+	TestEqual(TEXT("退化后下界"), Outside.Min, 0.0, 1e-6);
+	TestEqual(TEXT("退化后上界"), Outside.Max, 1500.0, 1e-6);
+
+	// 5) 无效限制区间（Lower == Upper）不参与夹紧
+	FChartDomain Free = FChartDomain::FromRange(-800.0, 900.0);
+	TestTrue(TEXT("无效限制时不夹紧"),
+		ChartDomainUtil::ClampDomainToRange(Free, 100.0, 100.0, AtLimits));
+	TestEqual(TEXT("无效限制时域保持不变"), Free.Min, -800.0, 1e-6);
+
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

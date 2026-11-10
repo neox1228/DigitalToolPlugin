@@ -66,6 +66,20 @@ struct NXCHARTS_API FChartDomainOverride
 	}
 };
 
+/** 域的通用操作（纯函数，便于单测） */
+namespace ChartDomainUtil
+{
+	/**
+	 * 把 Domain 夹进 [Lower, Upper]，并判断"这次变更是否值得应用"。
+	 *
+	 * 关键点：比较基准是 Current（当前正在显示的域），不是夹紧之前的 Domain。
+	 * 早期版本拿夹紧前后比，导致"限制内放大"被误判成"已到边界"而丢弃。
+	 *
+	 * @return false 表示夹紧后与当前域没有区别（已顶死在边界），调用方应忽略本次缩放
+	 */
+	NXCHARTS_API bool ClampDomainToRange(FChartDomain& Domain, double Lower, double Upper, const FChartDomain& Current);
+}
+
 /**
  * 笛卡尔坐标空间。
  * 约定：局部坐标 Y 轴向下、数据 Y 轴向上，所以 Y 映射是翻转的。
