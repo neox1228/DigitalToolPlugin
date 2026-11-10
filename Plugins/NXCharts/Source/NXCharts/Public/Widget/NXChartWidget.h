@@ -52,6 +52,10 @@ public:
 	/** 上次读到的文件修改时间 */
 	FDateTime SpecFileTimeStamp;
 
+	/** 是否自动重载：每 0.5 秒检查一次配置文件修改时间。打包后可以关掉 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NXCharts")
+	bool bAutoReloadSpec = true;
+
 	/** 每条系列最多保留的点数（<=0 表示不限制）。实时波形用它做滑动窗口 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NXCharts|Data")
 	int32 SeriesCapacity = 0;

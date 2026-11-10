@@ -532,6 +532,11 @@ bool UNXChartWidget::ReloadSpec()
 
 bool UNXChartWidget::ReloadSpecIfChanged()
 {
+	if (!bAutoReloadSpec)
+	{
+		return false;
+	}
+
 	const FString FullPath = GetSpecFullPath();
 	if (FullPath.IsEmpty())
 	{

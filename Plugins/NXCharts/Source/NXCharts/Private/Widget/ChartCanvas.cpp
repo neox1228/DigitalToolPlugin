@@ -67,6 +67,11 @@ void SChartCanvas::Tick(const FGeometry& AllottedGeometry, const double InCurren
 	SLeafWidget::Tick(AllottedGeometry, InCurrentTime, InDeltaTime);
 
 	// 每 0.5 秒看一次配置文件有没有被改
+	if (UNXChartWidget* OwnerWidget = Owner.Get(); OwnerWidget && !OwnerWidget->bAutoReloadSpec)
+	{
+		return;
+	}
+
 	SpecCheckAccumulator += InDeltaTime;
 	if (SpecCheckAccumulator < 0.5f)
 	{

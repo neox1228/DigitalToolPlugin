@@ -305,3 +305,13 @@ NXChartWidget → NXCharts → SpecPath = "NXCharts/Demo.json"
 | 改了 JSON 没反应 | 路径写错，或文件不在 Content 目录（看日志 Warning） |
 | 颜色不生效 | 十六进制格式不对，必须 `#RRGGBB` |
 | 曲线没出来 | 系列只定义了样式，还需要 `AddSeries` / `SetSeriesPoints` 喂数据 |
+### 10.5 自动重载开关与手动重载
+
+| 项 | 说明 |
+| --- | --- |
+| `bAutoReloadSpec` | 是否每 0.5 秒检查配置文件。编辑器里建议 `true`，打包后可设 `false` |
+| `ReloadSpec()` | 手动立即重载，返回 `bool`；**不受开关影响**，关掉自动也照样能用 |
+
+关掉后画布的 Tick 里会先判断再计数，连累加都省掉。
+
+性能参考：检查只做一次 `stat`（读文件时间戳，不读内容），约几十微秒；开销主要来自为了让轮询能跑而开启的每帧 Tick，所以打包项目建议关掉。

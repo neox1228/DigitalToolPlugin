@@ -323,3 +323,7 @@
 - `SChartCanvas` 可 Tick，0.5 秒轮询文件修改时间，变化即重载（只换配置，不动数据）
 
 **测试**：14 组，全部通过
+**补充 · 自动重载开关**
+
+- `bAutoReloadSpec`（`EditAnywhere`，默认 `true`）：关闭后 `ReloadSpecIfChanged` 直接返回，画布 Tick 也跳过累加
+- `ReloadSpec()` 手动重载不受该开关影响
