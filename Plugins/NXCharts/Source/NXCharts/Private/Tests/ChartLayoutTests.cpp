@@ -124,8 +124,8 @@ bool FNXChartsFramePipelineTest::RunTest(const FString&)
 	};
 
 	FChartSpec Spec;
-	Spec.Options.Title = FText::FromString(TEXT("Demo"));
-	Spec.Options.bShowLegend = false;
+	Spec.Title.Text = FText::FromString(TEXT("Demo"));
+	Spec.Legend.bShow = false;
 
 	FChartSeriesSpec SeriesA;
 	SeriesA.SeriesKey = TEXT("A");
@@ -329,7 +329,7 @@ bool FNXChartsLabelFormatTest::RunTest(const FString&)
 	TestTrue(TEXT("没填 DisplayName 时回退到 SeriesKey"), NoDisplay.GetLegendLabel() == TEXT("rpm"));
 
 	FChartSpec Spec;
-	Spec.Options.bShowLegend = false;
+	Spec.Legend.bShow = false;
 	Spec.AxisX.TickSuffix = TEXT("s");
 	Spec.Series.Add(SeriesSpec);
 
@@ -451,8 +451,8 @@ bool FNXChartsStyleFlagsTest::RunTest(const FString&)
 	};
 
 	FChartSpec Spec;
-	Spec.Options.bShowLegend = false;
-	Spec.Options.bGradientBackground = true;
+	Spec.Legend.bShow = false;
+	Spec.Background.bGradient = true;
 
 	FChartSeriesSpec SeriesSpec;
 	SeriesSpec.SeriesKey = TEXT("A");
@@ -498,8 +498,8 @@ bool FNXChartsLegendLayoutTest::RunTest(const FString&)
 	};
 
 	FChartSpec Spec;
-	Spec.Options.bShowLegend = true;
-	Spec.Options.LegendPosition = EChartLegendPosition::Bottom;
+	Spec.Legend.bShow = true;
+	Spec.Legend.Position = EChartLegendPosition::Bottom;
 
 	FChartSeriesSpec SeriesA;
 	SeriesA.SeriesKey = TEXT("A");

@@ -3,6 +3,10 @@
 
 #include "Widget/NXChartWidget.h"
 
+#include "HAL/FileManager.h"
+#include "Misc/Paths.h"
+#include "Spec/ChartSpecJson.h"
+
 #include "Frame/ChartFrameBuilder.h"
 #include "Widget/ChartCanvas.h"
 
@@ -23,6 +27,7 @@ void UNXChartWidget::ReleaseSlateResources(bool bReleaseChildren)
 void UNXChartWidget::SynchronizeProperties()
 {
 	Super::SynchronizeProperties();
+	ReloadSpec();
 	MarkSpecDirty();
 }
 
@@ -490,4 +495,59 @@ const FChartFrame& UNXChartWidget::GetFrame(const FVector2D& WidgetSize)
 	BuiltDataRevisionSum = DataRevision;
 	BuiltSize = WidgetSize;
 	return CachedFrame;
+}
+
+// ---------------------------------------------------------------------------- 配置加载
+
+FString UNXChartWidget::GetSpecFullPath() const
+{
+	if (SpecPath.IsEmpty())
+	{
+		return FString();
+	}
+	return FPaths::IsRelative(SpecPath) ? FPaths::Combine(FPaths::ProjectContentDir(), SpecPath) : SpecPath;
+}
+
+bool UNXChartWidget::ReloadSpec()
+{
+	const FString FullPath = GetSpecFullPath();
+	if (FullPath.IsEmpty())
+	{
+		return false;
+	}
+
+	FChartSpec Loaded;
+	FString Error;
+	if (!FChartSpecJson::LoadFromFile(FullPath, Loaded, Error))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[NXCharts] 配置加载失败 %s：%s"), *FullPath, *Error);
+		return false;
+	}
+
+	Spec = Loaded;
+	SpecFileTimeStamp = IFileManager::Get().GetTimeStamp(*FullPath);
+	MarkSpecDirty();
+	return true;
+}
+
+bool UNXChartWidget::ReloadSpecIfChanged()
+{
+	const FString FullPath = GetSpecFullPath();
+	if (FullPath.IsEmpty())
+	{
+		return false;
+	}
+
+	const FDateTime Stamp = IFileManager::Get().GetTimeStamp(*FullPath);
+	if (Stamp == FDateTime::MinValue())
+	{
+		return false;
+	}
+
+	if (Stamp == SpecFileTimeStamp)
+	{
+		return false;
+	}
+
+	return ReloadSpec();
 }

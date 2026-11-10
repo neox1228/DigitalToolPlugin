@@ -390,3 +390,49 @@ NXCharts.Layout.Clamp          缩放夹紧：限制内放大被接受、顶死�
 > `Fatal error: Null assigned to TNotNull` 崩溃，测试一条都跑不到。
 
 跑完队列会打印 `Automation Test Queue Empty 14 tests performed`，但进程不会自己退出，需要手动结束。
+
+---
+
+## 11. v0.3 迭代记录（2026-11）
+
+### 11.1 绘制组件化
+
+`SChartCanvas` 从"什么都画"降级为"调度器"，绘制内容拆成独立组件：
+
+```
+ChartCanvas      注册组件 + 按层遍历 + 输入处理
+ChartPainter.h   基类：GetLayer / IsEnabled / Paint
+Painters/        一个组件一对文件
+  ├─ BackgroundPainter
+  ├─ GridAndAxesPainter
+  ├─ AnnotationPainter
+  ├─ SeriesPainter
+  ├─ LegendPainter
+  └─ HoverPainter
+```
+
+组件的三条约定：**无状态**（开关与样式从 Frame.Spec 读）、**只读 Frame**、**层序由 GetLayer 决定**。
+
+`OnPaint` 不再认识任何具体绘制内容。新增一段绘制 = 新增一对文件 + `AllPainters.h` 一行 include + `Construct` 一行 Add。
+
+### 11.2 Spec 结构与 JSON 化
+
+- 去掉 `Options` 中间层，各配置块直接挂在 `FChartSpec` 下，与 `AxisX/AxisY/Series/Annotations` 平级
+- `FChartSpec` 从"Details 里逐字段配"改为**一个路径字符串**：`SpecPath` 指向 Content 下的 JSON
+- 新增 `FChartSpecJson` 解析层（依赖 Json 模块），字段全部可选，颜色用 `#RRGGBB`
+
+加载规则：路径空 → 内置默认；文件缺失或语法错 → 保留当前配置并记警告。
+
+### 11.3 自动重载
+
+`SChartCanvas` 可 Tick，每 0.5 秒 stat 一次目标文件，修改时间变化即调用 `ReloadSpec()`。
+只重载配置、不动数据，曲线不会闪断；PIE 与编辑器预览均生效。
+
+### 11.4 注解组件
+
+新增 `AnnotationPainter` + `FChartAnnotationSpec`，支持 `HorizontalLine` / `VerticalLine` / `Band`，
+绘制在 `Annotation` 层（网格之上、曲线之下）。这是对扩展点的一次验收：只新增一个组件文件 + 一个 Spec 块 + 一行注册。
+
+### 11.5 破坏性变更
+
+Spec 字段路径两次调整（Options 分块 → 扁平化 → JSON），**已保存的 Widget Blueprint 里的旧配置不迁移**，需按 `NXCharts_Usage.md` 的对照表重配。

@@ -5,7 +5,7 @@
  * @brief   主题数据资产（DataAsset），用于项目级换肤。
  *
  * 当前状态：FChartSpec 通过 TSoftObjectPtr 引用它，但实际配色取自
- * FChartOptionsSpec 里的各个颜色字段——这个类目前是"预留入口"，尚未参与渲染。
+ * FChartSpec 里的各个颜色字段——这个类目前是"预留入口"，尚未参与渲染。
  * 若要真正启用，应在布局阶段解析字体/颜色时"先读 Theme、再被 Spec 覆盖"。
  */
 

@@ -32,8 +32,25 @@ public:
 	// ---------------------------------------------------------------- 设计期配置
 
 	/** 图表配置。设计期可直接编辑，运行时可被 SetChartSpec 覆盖 */
+		/** 配置文件路径，相对 Content 目录，例如 "NXCharts/Demo.json"。留空使用内置默认 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NXCharts")
+	FString SpecPath;
+
+	/** 解析后的配置。由 SpecPath 加载，也可用 SetChartSpec 运行时整体替换 */
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "NXCharts")
 	FChartSpec Spec;
+
+	/** 立即重新读取 SpecPath。失败时保留当前配置 */
+	UFUNCTION(BlueprintCallable, Category = "NXCharts")
+	bool ReloadSpec();
+
+	/** 文件时间戳变了才重载，供画布轮询 */
+	bool ReloadSpecIfChanged();
+
+	FString GetSpecFullPath() const;
+
+	/** 上次读到的文件修改时间 */
+	FDateTime SpecFileTimeStamp;
 
 	/** 每条系列最多保留的点数（<=0 表示不限制）。实时波形用它做滑动窗口 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NXCharts|Data")

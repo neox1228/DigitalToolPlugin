@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Layout/ChartSpace.h"
+#include "Widget/ChartPainter.h"
 #include "Widgets/SLeafWidget.h"
 
 class UNXChartWidget;
@@ -21,6 +22,8 @@ public:
 	void Construct(const FArguments& InArgs, UNXChartWidget* InOwner);
 
 	// 绘制入口
+	virtual void Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime) override;
+
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry,
 	                      const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements,
 	                      int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;
@@ -35,12 +38,10 @@ public:
 	virtual void OnMouseLeave(const FPointerEvent& MouseEvent) override;
 
 private:
-	void PaintGridAndAxes(class FChartPaintContext& Ctx, const struct FChartFrame& Frame) const;
-	void PaintSeries(class FChartPaintContext& Ctx, const struct FChartFrame& Frame) const;
-	void PaintLegend(class FChartPaintContext& Ctx, const struct FChartFrame& Frame) const;
+	/** 绘制组件。按 GetLayer 稳定排序后遍历，OnPaint 不再认识任何具体绘制内容 */
+	TArray<TUniquePtr<FChartPainter>> Painters;
 
-	/** 十字准线 + 提示框（读取悬停状态，不修改任何数据） */
-	void PaintHover(class FChartPaintContext& Ctx, const struct FChartFrame& Frame) const;
+
 
 	// 弱引用，避免循环引用
 	TWeakObjectPtr<UNXChartWidget> Owner;
@@ -58,6 +59,9 @@ private:
 
 	/** 中键拖拽平移的状态（拖拽期间以按下瞬间的坐标为基准） */
 	bool bPanning = false;
+
+	/** 配置文件轮询计时 */
+	float SpecCheckAccumulator = 0.0f;
 	FVector2D PanStartLocal = FVector2D::ZeroVector;
 	FChartCartesianSpace PanStartSpace;
 

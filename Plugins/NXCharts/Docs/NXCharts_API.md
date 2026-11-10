@@ -112,26 +112,41 @@
 
 ### 3.1 `FChartSpec`
 
-| 字段 | 类型 | 说明 |
-| --- | --- | --- |
-| `Version` | `int32` | 结构体版本，供以后做升级 |
-| `Options` | `FChartOptionsSpec` | 图表级外观 |
-| `AxisX` / `AxisY` | `FChartAxisSpec` | 两根轴 |
-| `Series` | `TArray<FChartSeriesSpec>` | 系列定义（**不含数据点**） |
+根对象，相当于 ECharts 的 `option`。**每个成员要么是一个组件块，要么是全局设置**，没有中间层。
 
-### 3.2 `FChartOptionsSpec`
+**组件块**
+
+| 字段 | 类型 | 对应组件 |
+| --- | --- | --- |
+| `Title` | `FChartTitleSpec` | 标题 |
+| `Background` | `FChartBackgroundSpec` | 背景 |
+| `Grid` | `FChartGridSpec` | 网格 |
+| `Legend` | `FChartLegendSpec` | 图例 |
+| `AxisX` / `AxisY` | `FChartAxisSpec` | 轴 |
+| `Series` | `TArray<FChartSeriesSpec>` | 系列（**不含数据点**） |
+| `Annotations` | `TArray<FChartAnnotationSpec>` | 注解（阈值线/色带） |
+
+**全局设置**
 
 | 字段 | 说明 |
 | --- | --- |
-| `Title` / `TitleFont` / `AxisLabelFont` / `LegendFont` | 字体留空则回落引擎默认 |
-| `Theme` | 主题资产（预留，当前未参与渲染） |
-| `BackgroundColor` / `bGradientBackground` / `BackgroundColorBottom` | 背景纯色或垂直渐变 |
-| `GridColor` / `AxisColor` / `LabelColor` / `TitleColor` / `LegendTextColor` | 主题色 |
-| `bDashedGrid` / `GridDashLength` / `GridGapLength` | 虚线网格 |
-| `Padding` | 控件最外圈内边距（轴标签空间会在此基础上自动加码） |
+| `Colors` | 跨组件共享色：`AxisColor` / `LabelColor` / `TitleColor` |
+| `AxisLabelFont` | 轴标签与提示框共用；留空回落引擎默认 |
+| `Padding` | 控件最外圈内边距 |
 | `bAntialias` | 抗锯齿 |
-| `bShowLegend` / `LegendPosition` | 图例显示与位置（Top / Bottom / Right） |
+| `Theme` | 主题资产（预留） |
+| `Version` | 结构体版本 |
+### 3.2 各配置块字段
 
+| 块 | 字段 | 说明 |
+| --- | --- | --- |
+| `Title` | `Text` / `Font` | `Text` 为空则不画标题 |
+| `Background` | `Color` / `bGradient` / `ColorBottom` | 纯色或垂直渐变 |
+| `Grid` | `Color` / `bDashed` / `DashLength` / `GapLength` | 虚线可选 |
+| `Legend` | `bShow` / `Position` / `Font` / `TextColor` | `Position`：Top / Bottom / Right |
+
+**为什么要扁平**：早期有一个 `Options` 中间层打包这些块，导致「一级 = 一个组件」的规则被破坏。
+现在所有块直接挂在 `Spec` 下，加一个块 = 加一个字段 + 一个绘制组件，`OnPaint` 不动。
 ### 3.3 `FChartAxisSpec`
 
 | 字段 | 说明 |
@@ -169,6 +184,18 @@
 | `bGlow` / `GlowThickness` | 霓虹发光线 |
 
 ---
+
+### 3.6 `FChartAnnotationSpec`
+
+| 字段 | 说明 |
+| --- | --- |
+| `Kind` | `HorizontalLine`（Y = Value）/ `VerticalLine`（X = Value）/ `Band`（Value ~ RangeEnd 色带） |
+| `Value` | 线的位置；`Band` 时为起点 |
+| `RangeEnd` | 仅 `Band` 使用：终点 |
+| `Color` / `Thickness` / `bDashed` | 样式；色带会自动降低透明度到 25% |
+| `Label` | 线尾文字，留空不画 |
+
+**绘制层**：`Annotation` —— 在网格之上、曲线之下，不遮挡数据。
 
 ## 4. 枚举
 
@@ -263,3 +290,36 @@
 - 原因：`ClampDomainToRange` 的"是否有效"判定拿夹紧后的域和**夹紧前的缩放结果**比，
   导致任何落在限制区间内的放大都被判成"已到边界"而丢弃
 - 修法：判定基准改为**当前正在显示的域**；逻辑抽成 `ChartDomainUtil::ClampDomainToRange` 并补单测
+
+---
+
+### v0.3（2026-11）
+
+**新增 · 绘制组件化**
+
+- `FChartPainter`（`Private/Widget/ChartPainter.h`）：`GetLayer` / `IsEnabled` / `Paint`
+- `FChartPaintArgs`：`Ctx` / `Frame` / `Widget` / `LocalSize` / `bHoverActive` / `HoverLocal`
+- 六个组件各自独立文件：Background / GridAndAxes / Annotation / Series / Legend / Hover
+- `EChartLayer` 新增 `Annotation` 层
+
+**新增 · Spec 结构**
+
+- 去掉 `FChartOptionsSpec` 中间层；`Title` / `Background` / `Grid` / `Legend` / `Colors` 直接挂在 `FChartSpec` 下
+- `FChartSpec` 新增 `Annotations`（`TArray<FChartAnnotationSpec>`）
+- `FChartAnnotationSpec`：`Kind` / `Value` / `RangeEnd` / `Color` / `Thickness` / `bDashed` / `Label`
+
+**变更 · 配置来源**
+
+| 旧 | 新 |
+| --- | --- |
+| `Spec`（结构体，Details 逐字段配） | `SpecPath`（相对 Content 的 JSON 路径） |
+
+- 新增 `FChartSpecJson::LoadFromFile`（`Public/Spec/ChartSpecJson.h`）
+- 新增 `ReloadSpec()` / `ReloadSpecIfChanged()` / `GetSpecFullPath()`
+- 插件依赖新增 `Json` 模块
+
+**新增 · 自动重载**
+
+- `SChartCanvas` 可 Tick，0.5 秒轮询文件修改时间，变化即重载（只换配置，不动数据）
+
+**测试**：14 组，全部通过

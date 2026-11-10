@@ -101,6 +101,8 @@ enum class EChartLayer : uint8
 	Background,
 	Grid,
 	Axis,
+	/** 注解层：阈值线/色带，画在网格之上、曲线之下 */
+	Annotation,
 	Series,
 	Overlay,
 	Tooltip

@@ -29,81 +29,138 @@ enum class EChartLegendPosition : uint8
 	Right
 };
 
-/** 图表级外观配置 */
+/** 标题组件配置 */
 USTRUCT(BlueprintType)
-struct NXCHARTS_API FChartOptionsSpec
+struct NXCHARTS_API FChartTitleSpec
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Options")
-	FText Title;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Title")
+	FText Text;
 
-	/** 字体留空时回落到引擎默认字体（打包后仍有效） */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Options|Font")
-	FSlateFontInfo TitleFont;
+	/** 留空时回落到引擎默认字体（打包后仍有效） */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Title|Font")
+	FSlateFontInfo Font;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Options|Font")
-	FSlateFontInfo AxisLabelFont;
+	bool IsVisible() const { return !Text.IsEmpty(); }
+};
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Options|Font")
-	FSlateFontInfo LegendFont;
+/** 背景组件配置 */
+USTRUCT(BlueprintType)
+struct NXCHARTS_API FChartBackgroundSpec
+{
+	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Options")
-	TSoftObjectPtr<UNXChartTheme> Theme;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Background")
+	FLinearColor Color = FLinearColor(0.02f, 0.03f, 0.05f, 1.0f);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Options")
-	FLinearColor BackgroundColor = FLinearColor(0.02f, 0.03f, 0.05f, 1.0f);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Background")
+	bool bGradient = false;
 
-	/** 背景垂直渐变：从 BackgroundColor 渐变到这里 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Options")
-	bool bGradientBackground = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Background",
+		meta = (EditCondition = "bGradient", EditConditionHides))
+	FLinearColor ColorBottom = FLinearColor(0.01f, 0.02f, 0.04f, 1.0f);
+};
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Options",
-		meta = (EditCondition = "bGradientBackground", EditConditionHides))
-	FLinearColor BackgroundColorBottom = FLinearColor(0.01f, 0.02f, 0.04f, 1.0f);
+/** 网格组件配置 */
+USTRUCT(BlueprintType)
+struct NXCHARTS_API FChartGridSpec
+{
+	GENERATED_BODY()
 
-	// ---- 主题色。放在 Spec 里而不是渲染器里，才能做出不同风格的图表
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
+	FLinearColor Color = FLinearColor(0.16f, 0.19f, 0.24f, 1.0f);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Options|Colors")
-	FLinearColor GridColor = FLinearColor(0.16f, 0.19f, 0.24f, 1.0f);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
+	bool bDashed = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Options|Colors")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid",
+		meta = (EditCondition = "bDashed", EditConditionHides, ClampMin = "1.0"))
+	float DashLength = 4.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid",
+		meta = (EditCondition = "bDashed", EditConditionHides, ClampMin = "0.0"))
+	float GapLength = 4.0f;
+};
+
+/** 图例组件配置 */
+USTRUCT(BlueprintType)
+struct NXCHARTS_API FChartLegendSpec
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Legend")
+	bool bShow = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Legend",
+		meta = (EditCondition = "bShow", EditConditionHides))
+	EChartLegendPosition Position = EChartLegendPosition::Bottom;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Legend|Font")
+	FSlateFontInfo Font;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Legend|Font")
+	FLinearColor TextColor = FLinearColor(0.72f, 0.77f, 0.85f, 1.0f);
+};
+
+/** 跨组件共享的主题色（轴、刻度、标题、提示框） */
+USTRUCT(BlueprintType)
+struct NXCHARTS_API FChartColorsSpec
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Colors")
 	FLinearColor AxisColor = FLinearColor(0.35f, 0.40f, 0.48f, 1.0f);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Options|Colors")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Colors")
 	FLinearColor LabelColor = FLinearColor(0.72f, 0.77f, 0.85f, 1.0f);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Options|Colors")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Colors")
 	FLinearColor TitleColor = FLinearColor(0.92f, 0.95f, 1.0f, 1.0f);
+};
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Options|Colors")
-	FLinearColor LegendTextColor = FLinearColor(0.72f, 0.77f, 0.85f, 1.0f);
 
-	// ---- 网格样式
+/** 注解类型 */
+UENUM(BlueprintType)
+enum class EChartAnnotationKind : uint8
+{
+	/** 水平线：Y = Value（阈值线） */
+	HorizontalLine,
+	/** 垂直线：X = Value（时间游标/分界） */
+	VerticalLine,
+	/** 水平色带：Value ~ RangeEnd（告警区间） */
+	Band
+};
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Options|Grid")
-	bool bDashedGrid = false;
+/** 一条注解。放在 Spec 顶层，和系列平级 */
+USTRUCT(BlueprintType)
+struct NXCHARTS_API FChartAnnotationSpec
+{
+	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Options|Grid",
-		meta = (EditCondition = "bDashedGrid", EditConditionHides, ClampMin = "1.0"))
-	float GridDashLength = 4.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Annotation")
+	EChartAnnotationKind Kind = EChartAnnotationKind::HorizontalLine;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Options|Grid",
-		meta = (EditCondition = "bDashedGrid", EditConditionHides, ClampMin = "0.0"))
-	float GridGapLength = 4.0f;
+	/** HorizontalLine: Y 值；VerticalLine: X 值；Band: 起点 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Annotation")
+	float Value = 0.0f;
 
-	/** 控件最外圈的内边距，布局会在此基础上再按标签实测尺寸加码 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Options")
-	FMargin Padding = FMargin(16.0f, 8.0f, 16.0f, 8.0f);
+	/** 仅 Band 使用：色带终点 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Annotation")
+	float RangeEnd = 0.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Options")
-	bool bAntialias = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Annotation")
+	FLinearColor Color = FLinearColor(0.95f, 0.45f, 0.35f, 0.85f);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Options")
-	bool bShowLegend = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Annotation")
+	float Thickness = 1.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Options", meta = (EditCondition = "bShowLegend", EditConditionHides))
-	EChartLegendPosition LegendPosition = EChartLegendPosition::Bottom;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Annotation")
+	bool bDashed = true;
+
+	/** 线尾文字，留空不画 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Annotation")
+	FString Label;
 };
 
 /**
@@ -115,12 +172,51 @@ struct NXCHARTS_API FChartSpec
 {
 	GENERATED_BODY()
 
+	/** 注解：阈值线 / 分界线 / 色带。空数组表示不画 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Annotations")
+	TArray<FChartAnnotationSpec> Annotations;
 	/** 结构体版本。以后改字段时用它做升级，保证旧存档能读 */
 	UPROPERTY()
 	int32 Version = 1;
 
+		// ---- 组件块：一个块对应一个绘制组件 ----
+
+	/** 标题 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chart")
-	FChartOptionsSpec Options;
+	FChartTitleSpec Title;
+
+	/** 背景 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chart")
+	FChartBackgroundSpec Background;
+
+	/** 网格 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chart")
+	FChartGridSpec Grid;
+
+	/** 图例 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chart")
+	FChartLegendSpec Legend;
+
+	/** 跨组件共享色 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chart")
+	FChartColorsSpec Colors;
+
+	// ---- 全局设置：不归属任何组件 ----
+
+	/** 轴标签字体（轴与提示框共用）；留空回落引擎默认 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chart|Layout")
+	FSlateFontInfo AxisLabelFont;
+
+	/** 控件最外圈内边距 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chart|Layout")
+	FMargin Padding = FMargin(16.0f, 8.0f, 16.0f, 8.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chart|Layout")
+	bool bAntialias = true;
+
+	/** 主题资产（预留，当前未参与渲染） */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chart")
+	TSoftObjectPtr<UNXChartTheme> Theme;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chart")
 	FChartAxisSpec AxisX;

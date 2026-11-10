@@ -19,7 +19,7 @@ public class NXCharts : ModuleRules
 				"Engine",
 				"UMG",
 				"Slate",
-				"SlateCore",
+				"SlateCore", "Json",
 				"InputCore"
 			}
 			);

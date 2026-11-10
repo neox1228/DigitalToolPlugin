@@ -150,7 +150,7 @@ FChartLayout FChartLayoutBuilder::Build(const FChartSpec& Spec,
 {
 	FChartLayout Layout;
 	Layout.WidgetSize = WidgetSize;
-	Layout.LegendPosition = Spec.Options.LegendPosition;
+	Layout.LegendPosition = Spec.Legend.Position;
 
 	if (WidgetSize.X <= 1.0 || WidgetSize.Y <= 1.0)
 	{
@@ -159,12 +159,12 @@ FChartLayout FChartLayoutBuilder::Build(const FChartSpec& Spec,
 
 	const FChartMeasureFunc& Measure = InMeasure ? InMeasure : FChartMeasureFunc(&DefaultMeasure);
 
-	Layout.AxisLabelFont = ResolveFont(Spec.Options.AxisLabelFont, 9.0f);
-	Layout.TitleFont = ResolveFont(Spec.Options.TitleFont, 14.0f);
-	Layout.LegendFont = ResolveFont(Spec.Options.LegendFont, 9.0f);
+	Layout.AxisLabelFont = ResolveFont(Spec.AxisLabelFont, 9.0f);
+	Layout.TitleFont = ResolveFont(Spec.Title.Font, 14.0f);
+	Layout.LegendFont = ResolveFont(Spec.Legend.Font, 9.0f);
 
 	// ------------------------------------------------------------------ 内容区
-	const FMargin& Padding = Spec.Options.Padding;
+	const FMargin& Padding = Spec.Padding;
 	FVector2D ContentMin(Padding.Left, Padding.Top);
 	FVector2D ContentMax(WidgetSize.X - Padding.Right, WidgetSize.Y - Padding.Bottom);
 	if (ContentMax.X - ContentMin.X < MinPlotSize || ContentMax.Y - ContentMin.Y < MinPlotSize)
@@ -173,22 +173,22 @@ FChartLayout FChartLayoutBuilder::Build(const FChartSpec& Spec,
 	}
 
 	// ------------------------------------------------------------------ 图表标题
-	if (!Spec.Options.Title.IsEmpty())
+	if (Spec.Title.IsVisible())
 	{
-		const FVector2D TitleSize = Measure(Spec.Options.Title.ToString(), Layout.TitleFont);
+		const FVector2D TitleSize = Measure(Spec.Title.Text.ToString(), Layout.TitleFont);
 		Layout.TitleRect = FBox2D(ContentMin, FVector2D(ContentMax.X, ContentMin.Y + TitleSize.Y));
 		ContentMin.Y += TitleSize.Y + TitleGap;
 	}
 
 	// ------------------------------------------------------------------ 图例（上 / 下）
-	const bool bWantLegend = Spec.Options.bShowLegend && CountLegendSeries(Spec) > 0;
-	if (bWantLegend && Spec.Options.LegendPosition != EChartLegendPosition::Right)
+	const bool bWantLegend = Spec.Legend.bShow && CountLegendSeries(Spec) > 0;
+	if (bWantLegend && Spec.Legend.Position != EChartLegendPosition::Right)
 	{
 		const double LineHeight = Measure(TEXT("Ag"), Layout.LegendFont).Y;
 		const double LegendHeight = LineHeight + LegendRowPadding;
 		if (LegendHeight > 0.0)
 		{
-			if (Spec.Options.LegendPosition == EChartLegendPosition::Top)
+			if (Spec.Legend.Position == EChartLegendPosition::Top)
 			{
 				Layout.LegendRect = FBox2D(ContentMin, FVector2D(ContentMax.X, ContentMin.Y + LegendHeight));
 				ContentMin.Y += LegendHeight + LegendGap;
@@ -257,7 +257,7 @@ FChartLayout FChartLayoutBuilder::Build(const FChartSpec& Spec,
 	FVector2D PlotMax(ContentMax.X, ContentMax.Y - XReserved);
 
 	// ------------------------------------------------------------------ 图例（右）
-	if (bWantLegend && Spec.Options.LegendPosition == EChartLegendPosition::Right)
+	if (bWantLegend && Spec.Legend.Position == EChartLegendPosition::Right)
 	{
 		double LegendWidth = 0.0;
 		for (const FChartSeriesSpec& Item : Spec.Series)
