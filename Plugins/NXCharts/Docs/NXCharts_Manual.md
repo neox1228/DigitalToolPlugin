@@ -436,3 +436,37 @@ Painters/        一个组件一对文件
 ### 11.5 破坏性变更
 
 Spec 字段路径两次调整（Options 分块 → 扁平化 → JSON），**已保存的 Widget Blueprint 里的旧配置不迁移**，需按 `NXCharts_Usage.md` 的对照表重配。
+---
+
+## 12. 缩放与值域架构（v0.3.2）
+
+### 12.1 缩放策略可替换
+
+```
+IChartZoom（接口）
+   └─ FCartesianZoom（当前实现：光标锚点 + 双轴 + 边界钳制）
+
+ChartCanvas
+   └─ TUniquePtr<IChartZoom> Zoom
+        └─ OnMouseWheel 只做转发
+```
+
+画布不认识任何具体算法。新增图表类型时替换 `IChartZoom` 实现即可，`OnMouseWheel` 不动。
+
+### 12.2 轴边界分两侧
+
+```
+FChartAxisBound { Mode: Auto | Limit, Value }
+   ├─ Auto   跟数据
+   └─ Limit  钳到 Value（数据没到就按数据）
+```
+
+`Padding` 只作用于 Auto 侧：`0` 表示曲线贴边，可彻底消除自动域产生的负值。
+
+旧字段 `bUseHardLimits` / `HardLimits` 保留，内部映射为"两侧 Limit"。
+
+### 12.3 布局带宽固定
+
+`AxisLabelBandWidth` / `AxisLabelBandHeight` 大于 0 时，轴标签区使用**固定宽度**而不是实测刻度文字宽度。
+
+这样缩放时刻度数值变化不会再改变 `PlotRect`，曲线不会左右抖动。为 0 时退回实测（旧行为）。

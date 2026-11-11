@@ -1,61 +1,27 @@
 {
-	"title": {
-		"text": "CPU 使率",
-		"fontSize": 14
-	},
-	"background": {
-		"color": "#05080D",
-		"gradient": true,
-		"colorBottom": "#02040A"
-	},
-	"grid": {
-		"color": "#282F3D",
-		"dashed": false
-	},
-	"legend": {
-		"show": true,
-		"position": "bottom",
-		"textColor": "#B8C4D6"
-	},
-	"colors": {
-		"axis": "#596680",
-		"label": "#B8C4D6",
-		"title": "#EAF2FF"
-	},
-	"axisX": {
-		"title": "时间",
-		"unit": "s",
-		"tickSuffix": "s",
-		"desiredTicks": 6,
-		"showGrid": true,
-		"showLabels": true
-	},
-	"axisY": {
-		"title": "占用",
-		"unit": "%",
-		"format": "integer",
-		"hardLimits": true,
-		"min": 0,
-		"max": 100
-	},
-	"series": [
-		{
-			"key": "111",
-			"name": "CPU",
-			"color": "#3ED6C6",
-			"type": "line",
-			"curve": "smooth",
-			"fill": true,
-			"glow": true
-		}
-	],
-	"annotations": [
-		{
-			"kind": "horizontalLine",
-			"value": 80,
-			"color": "#FF6B4A",
-			"label": "警戒线",
-			"dashed": true
-		}
-	]
+  "title":      { "text": "CPU 使用率", "fontSize": 14 },
+  "background": { "color": "#05080D", "gradient": true, "colorBottom": "#02040A" },
+  "grid":       { "color": "#282F3D", "dashed": false },
+  "legend":     { "show": true, "position": "bottom", "textColor": "#B8C4D6" },
+  "colors":     { "axis": "#596680", "label": "#B8C4D6", "title": "#EAF2FF" },
+
+  "axisLabelBandWidth": 44,
+  "axisLabelBandHeight": 18,
+
+  "axisX": { "title": "时间", "unit": "s", "tickSuffix": "s", "desiredTicks": 6, "showGrid": true, "showLabels": true },
+
+  "axisY": { "title": "占用", "unit": "%", "format": "integer",
+             "padding": 0,
+             "lowerBound": { "value": 0 },
+             "upperBound": { "value": 100 } },
+
+  "series": [
+    { "key": "cpu", "name": "CPU", "color": "#3ED6C6", "type": "line", "curve": "smooth", "fill": true, "glow": true },
+    { "key": "mem", "name": "内存", "color": "#7A8CFF", "type": "line", "curve": "smooth", "fill": false }
+  ],
+
+  "annotations": [
+    { "kind": "horizontalLine", "value": 80, "color": "#FF6B4A", "label": "警戒线", "dashed": true },
+    { "kind": "band", "value": 90, "rangeEnd": 100, "color": "#FF4A4A", "label": "" }
+  ]
 }
