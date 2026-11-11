@@ -45,6 +45,18 @@ namespace
 		Axis.bShowGrid = B(O, "showGrid", Axis.bShowGrid);
 		Axis.bShowLabels = B(O, "showLabels", Axis.bShowLabels);
 		Axis.bUseHardLimits = B(O, "hardLimits", Axis.bUseHardLimits);
+		Axis.Padding = (float)N(O, "padding", Axis.Padding);
+
+		if (const TSharedPtr<FJsonObject> LB = Obj(O, "lowerBound"))
+		{
+			Axis.LowerBound.Mode = EChartAxisBoundMode::Limit;
+			Axis.LowerBound.Value = (float)N(LB, "value", 0.0);
+		}
+		if (const TSharedPtr<FJsonObject> UB = Obj(O, "upperBound"))
+		{
+			Axis.UpperBound.Mode = EChartAxisBoundMode::Limit;
+			Axis.UpperBound.Value = (float)N(UB, "value", 0.0);
+		}
 		Axis.HardLimits = FVector2D(N(O, "min", Axis.HardLimits.X), N(O, "max", Axis.HardLimits.Y));
 		if (B(O, "manual", false))
 		{
@@ -110,6 +122,9 @@ bool FChartSpecJson::LoadFromFile(const FString& FullPath, FChartSpec& OutSpec, 
 		Spec.Colors.LabelColor = Col(O, "label", Spec.Colors.LabelColor);
 		Spec.Colors.TitleColor = Col(O, "title", Spec.Colors.TitleColor);
 	}
+
+	Spec.AxisLabelBandWidth = (float)N(Root, "axisLabelBandWidth", Spec.AxisLabelBandWidth);
+	Spec.AxisLabelBandHeight = (float)N(Root, "axisLabelBandHeight", Spec.AxisLabelBandHeight);
 
 	ParseAxis(Obj(Root, "axisX"), Spec.AxisX);
 	ParseAxis(Obj(Root, "axisY"), Spec.AxisY);

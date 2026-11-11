@@ -166,13 +166,68 @@ FChartDomain FChartFrameBuilder::ResolveDomain(EChartAxis Axis, const FChartAxis
 
 	Domain.Normalize();
 
-	// Y 轴上下留 5% 余量，曲线不会贴死绘图区边界；X 轴不留，线条从边缘开始更符合预期
-	if (!bXAxis)
+	// 留白：X 轴不留（线条从边缘开始），Y 轴按 Padding 比例上下扩
+	const double PadRatio = bXAxis ? 0.0 : AxisSpec.Padding;
+	const double Pad = Domain.Size() * PadRatio;
+	if (Pad > 0.0)
 	{
-		Domain.Pad(0.05);
+		// 只给 Auto 侧留白，Limit 侧会被钳回去，留白没有意义
+		if (AxisSpec.LowerBound.Mode == EChartAxisBoundMode::Auto) { Domain.Min -= Pad; }
+		if (AxisSpec.UpperBound.Mode == EChartAxisBoundMode::Auto) { Domain.Max += Pad; }
 	}
 
-	return ClampToHardLimits(Domain, AxisSpec);
+	// 边界：新字段优先；旧的 bUseHardLimits 作为兼容映射（两侧都当 Limit）
+	bool bHasLower = false;
+	bool bHasUpper = false;
+	double Lower = 0.0;
+	double Upper = 0.0;
+
+	if (AxisSpec.LowerBound.Mode == EChartAxisBoundMode::Limit)
+	{
+		Lower = AxisSpec.LowerBound.Value;
+		bHasLower = true;
+	}
+	else if (AxisSpec.bUseHardLimits)
+	{
+		Lower = FMath::Min(AxisSpec.HardLimits.X, AxisSpec.HardLimits.Y);
+		bHasLower = true;
+	}
+
+	if (AxisSpec.UpperBound.Mode == EChartAxisBoundMode::Limit)
+	{
+		Upper = AxisSpec.UpperBound.Value;
+		bHasUpper = true;
+	}
+	else if (AxisSpec.bUseHardLimits)
+	{
+		Upper = FMath::Max(AxisSpec.HardLimits.X, AxisSpec.HardLimits.Y);
+		bHasUpper = true;
+	}
+
+	if (bHasLower) { Domain.Min = FMath::Max(Domain.Min, Lower); }
+	if (bHasUpper) { Domain.Max = FMath::Min(Domain.Max, Upper); }
+
+	// 被钳没了：退化成展示整个区间
+	if (Domain.Max - Domain.Min <= KINDA_SMALL_NUMBER)
+	{
+		if (bHasLower && bHasUpper)
+		{
+			Domain.Min = Lower;
+			Domain.Max = Upper;
+		}
+		else if (bHasLower)
+		{
+			Domain.Min = Lower;
+			Domain.Max = Lower + 1.0;
+		}
+		else if (bHasUpper)
+		{
+			Domain.Max = Upper;
+			Domain.Min = Upper - 1.0;
+		}
+	}
+
+	return Domain;
 }
 
 bool FChartFrameBuilder::Build(const FChartSpec& Spec, const FChartSeriesDataPool& Data,

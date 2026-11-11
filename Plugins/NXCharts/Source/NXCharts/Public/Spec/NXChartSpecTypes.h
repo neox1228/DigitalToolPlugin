@@ -102,6 +102,29 @@ struct NXCHARTS_API FChartSeriesSpec
 	}
 };
 
+/** 单侧边界的处理方式 */
+UENUM(BlueprintType)
+enum class EChartAxisBoundMode : uint8
+{
+	/** 跟数据走 */
+	Auto,
+	/** 用户指定值：数据没到就按数据，到了就钳住 */
+	Limit
+};
+
+/** 一根轴某一侧的边界 */
+USTRUCT(BlueprintType)
+struct NXCHARTS_API FChartAxisBound
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bound")
+	EChartAxisBoundMode Mode = EChartAxisBoundMode::Auto;
+
+	/** Mode == Limit 时生效 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bound")
+	float Value = 0.0f;
+};
 /** 单根轴的配置 */
 USTRUCT(BlueprintType)
 struct NXCHARTS_API FChartAxisSpec
@@ -155,4 +178,16 @@ struct NXCHARTS_API FChartAxisSpec
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Axis|Limits",
 		meta = (EditCondition = "bUseHardLimits", EditConditionHides))
 	FVector2D HardLimits = FVector2D(0.0, 100.0);
+
+	/** 下界：Auto 跟数据，Limit 钳到 Value */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Axis|Limits")
+	FChartAxisBound LowerBound;
+
+	/** 上界：Auto 跟数据，Limit 钳到 Value */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Axis|Limits")
+	FChartAxisBound UpperBound;
+
+	/** 自动域的留白比例。0 表示曲线贴边；只作用于 Auto 侧 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Axis|Limits", meta = (ClampMin = "0.0", ClampMax = "0.5"))
+	float Padding = 0.05f;
 };

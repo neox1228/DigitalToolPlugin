@@ -315,3 +315,18 @@ NXChartWidget → NXCharts → SpecPath = "NXCharts/Demo.json"
 关掉后画布的 Tick 里会先判断再计数，连累加都省掉。
 
 性能参考：检查只做一次 `stat`（读文件时间戳，不读内容），约几十微秒；开销主要来自为了让轮询能跑而开启的每帧 Tick，所以打包项目建议关掉。
+### 10.6 值域与留白（v0.3.1）
+
+轴的每一侧独立配置，JSON 示例：
+
+```json
+"axisY": { "padding": 0, "lowerBound": { "value": 0 }, "upperBound": { "value": 1200 } }
+```
+
+| 字段 | 说明 |
+| --- | --- |
+| `padding` | 自动域留白比例，默认 `0.05`；只作用于 Auto 侧。设 `0` 可彻底消除负数 |
+| `lowerBound` / `upperBound` | 出现即表示该侧为 Limit：数据没到就按数据，到了就钳住 |
+| `axisLabelBandWidth` / `axisLabelBandHeight` | 固定轴标签带宽，消除缩放时绘图区抖动；`0` 表示按实测自动 |
+
+只想要下限（最大值未知）就只写 `lowerBound`。

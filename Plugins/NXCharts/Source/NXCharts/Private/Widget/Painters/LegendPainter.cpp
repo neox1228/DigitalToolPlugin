@@ -7,9 +7,9 @@
 namespace
 {
 	
-constexpr double LegendMarkerSize = 10.0;
+constexpr double SwatchSize = 10.0;
 	
-constexpr double LegendMarkerGap = 5.0;
+constexpr double SwatchGap = 5.0;
 
 void PaintLegendImpl(const FChartPaintArgs& Args)
 {
@@ -42,7 +42,7 @@ void PaintLegendImpl(const FChartPaintArgs& Args)
 
 		Ctx.DrawRect(Entry.MarkerRect.Min, Entry.MarkerRect.GetSize(), SwatchColor);
 		Ctx.DrawText(SeriesSpec->GetLegendLabel(),
-		             FVector2D(Entry.MarkerRect.Max.X + LegendMarkerGap, Entry.Rect.Min.Y + 2.0),
+		             FVector2D(Entry.MarkerRect.Max.X + SwatchGap, Entry.Rect.Min.Y + 2.0),
 		             Layout.LegendFont, TextColor, EChartTextHAlign::Left, EChartTextVAlign::Top);
 	}
 }

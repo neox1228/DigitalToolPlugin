@@ -234,10 +234,14 @@ FChartLayout FChartLayoutBuilder::Build(const FChartSpec& Spec,
 	}
 
 	// ------------------------------------------------------------------ 为轴预留的边距
+	// 带宽：优先用配置值，避免刻度数值变化时绘图区左右抖动
+	const double XBand = Spec.AxisLabelBandHeight > 0.0 ? Spec.AxisLabelBandHeight : Layout.XAxis.MaxLabelSize.Y;
+	const double YBand = Spec.AxisLabelBandWidth > 0.0 ? Spec.AxisLabelBandWidth : Layout.YAxis.MaxLabelSize.X;
+
 	double XReserved = 0.0;
 	if (Spec.AxisX.bShowLabels && Layout.XAxis.MaxLabelSize.Y > 0.0)
 	{
-		XReserved += Layout.XAxis.MaxLabelSize.Y + AxisLabelGap;
+		XReserved += XBand + AxisLabelGap;
 	}
 	if (!Layout.XAxis.Title.IsEmpty())
 	{
@@ -248,7 +252,7 @@ FChartLayout FChartLayoutBuilder::Build(const FChartSpec& Spec,
 	double YReserved = 0.0;
 	if (Spec.AxisY.bShowLabels && Layout.YAxis.MaxLabelSize.X > 0.0)
 	{
-		YReserved += Layout.YAxis.MaxLabelSize.X + AxisLabelGap;
+		YReserved += YBand + AxisLabelGap;
 	}
 	Layout.YAxis.ReservedSize = YReserved;
 
@@ -287,7 +291,7 @@ FChartLayout FChartLayoutBuilder::Build(const FChartSpec& Spec,
 	if (!Layout.XAxis.Title.IsEmpty())
 	{
 		const double LabelBand = (Spec.AxisX.bShowLabels && Layout.XAxis.MaxLabelSize.Y > 0.0)
-			? Layout.XAxis.MaxLabelSize.Y + AxisLabelGap
+			? XBand + AxisLabelGap
 			: 0.0;
 		const double Top = PlotMax.Y + LabelBand;
 		Layout.XAxisTitleRect = FBox2D(FVector2D(PlotMin.X, Top),

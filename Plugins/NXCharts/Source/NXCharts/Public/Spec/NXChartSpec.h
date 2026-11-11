@@ -207,6 +207,14 @@ struct NXCHARTS_API FChartSpec
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chart|Layout")
 	FSlateFontInfo AxisLabelFont;
 
+	/** Y 轴标签带宽：>0 固定，缩放时绘图区不会左右抖；0 = 按实测自动 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chart|Layout", meta = (ClampMin = "0.0"))
+	float AxisLabelBandWidth = 0.0f;
+
+	/** X 轴标签带宽：>0 固定；0 = 按实测自动 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chart|Layout", meta = (ClampMin = "0.0"))
+	float AxisLabelBandHeight = 0.0f;
+
 	/** 控件最外圈内边距 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chart|Layout")
 	FMargin Padding = FMargin(16.0f, 8.0f, 16.0f, 8.0f);
