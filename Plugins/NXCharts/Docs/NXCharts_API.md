@@ -327,3 +327,9 @@
 
 - `bAutoReloadSpec`（`EditAnywhere`，默认 `true`）：关闭后 `ReloadSpecIfChanged` 直接返回，画布 Tick 也跳过累加
 - `ReloadSpec()` 手动重载不受该开关影响
+**新增 · 缩放策略抽象**
+
+- `IChartZoom`（`Private/Widget/Zoom/ChartZoom.h`）：`HandleWheel(FChartZoomArgs&)`
+- `FChartZoomArgs`：`LocalPosition` / `WheelDelta` / `Frame` / `Override`
+- `FCartesianZoom`：光标锚点、双轴缩放、按轴边界钳制（支持新旧两套边界字段）
+- 画布持有 `TUniquePtr<IChartZoom>`，`OnMouseWheel` 只做转发：算法与图表类型解耦

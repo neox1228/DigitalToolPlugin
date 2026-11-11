@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Layout/ChartSpace.h"
 #include "Widget/ChartPainter.h"
+#include "Widget/Zoom/ChartZoom.h"
 #include "Widgets/SLeafWidget.h"
 
 class UNXChartWidget;
@@ -40,6 +41,9 @@ public:
 private:
 	/** 绘制组件。按 GetLayer 稳定排序后遍历，OnPaint 不再认识任何具体绘制内容 */
 	TArray<TUniquePtr<FChartPainter>> Painters;
+
+	/** 缩放策略。画布只调用，不认识具体算法 */
+	TUniquePtr<IChartZoom> Zoom;
 
 
 

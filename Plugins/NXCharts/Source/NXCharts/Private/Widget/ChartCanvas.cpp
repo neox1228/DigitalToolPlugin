@@ -6,6 +6,7 @@
 #include "Layout/ChartTicks.h"
 #include "Widget/NXChartWidget.h"
 #include "Widget/Painters/AllPainters.h"
+#include "Widget/Zoom/CartesianZoom.h"
 
 
 namespace
@@ -55,6 +56,8 @@ void SChartCanvas::Construct(const FArguments& InArgs, UNXChartWidget* InOwner)
 	Painters.Add(MakeUnique<FSeriesPainter>());
 	Painters.Add(MakeUnique<FLegendPainter>());
 	Painters.Add(MakeUnique<FHoverPainter>());
+
+	Zoom = MakeUnique<FCartesianZoom>();
 
 	Painters.StableSort([](const TUniquePtr<FChartPainter>& A, const TUniquePtr<FChartPainter>& B)
 	{
@@ -325,49 +328,22 @@ FReply SChartCanvas::OnMouseWheel(const FGeometry& MyGeometry, const FPointerEve
 		return FReply::Unhandled();
 	}
 
-	const double WheelDelta = MouseEvent.GetWheelDelta();
-	if (FMath::IsNearlyZero(WheelDelta))
+	if (!Zoom)
 	{
 		return FReply::Unhandled();
 	}
 
-	// 向上滚（delta > 0）= 放大
-	const double Factor = FMath::Pow(1.3, -WheelDelta);
+	// 画布只负责转发，具体怎么缩放由策略决定
+	FChartZoomArgs Args;
+	Args.LocalPosition = LocalPosition;
+	Args.WheelDelta = MouseEvent.GetWheelDelta();
+	Args.Frame = &Frame;
+	Args.Override = Widget->GetDomainOverride();
 
-	// 以光标所在的数据值为锚点缩放：锚点在屏幕上保持不动
-	const FVector2D Anchor = Frame.Space.LocalToData(LocalPosition);
-
-	auto ZoomDomain = [](const FChartDomain& Domain, double AnchorValue, double InFactor)
+	if (Zoom->HandleWheel(Args))
 	{
-		const double NewSpan = Domain.Size() * InFactor;
-		if (NewSpan < 1e-9 || NewSpan > 1e12)
-		{
-			return Domain; // 到达极限，保持不变
-		}
-
-		FChartDomain Result;
-		Result.bValid = true;
-		Result.Min = AnchorValue + (Domain.Min - AnchorValue) * InFactor;
-		Result.Max = AnchorValue + (Domain.Max - AnchorValue) * InFactor;
-		return Result;
-	};
-
-	FChartDomain XDomain = ZoomDomain(Frame.Space.GetXDomain(), Anchor.X, Factor);
-	FChartDomain YDomain = ZoomDomain(Frame.Space.GetYDomain(), Anchor.Y, Factor);
-
-	// 顶到轴的取值范围限制就不再继续缩放（判定基准是当前显示的域）
-	if (!ApplyHardLimits(Frame.Spec.AxisX, Frame.Space.GetXDomain(), XDomain)
-		|| !ApplyHardLimits(Frame.Spec.AxisY, Frame.Space.GetYDomain(), YDomain))
-	{
-		return FReply::Handled();
+		Widget->SetDomainOverrideRaw(Args.Override);
 	}
-
-	FChartDomainOverride Override = Widget->GetDomainOverride();
-	Override.bOverrideX = true;
-	Override.XRange = FVector2D(XDomain.Min, XDomain.Max);
-	Override.bOverrideY = true;
-	Override.YRange = FVector2D(YDomain.Min, YDomain.Max);
-	Widget->SetDomainOverrideRaw(Override);
 
 	return FReply::Handled();
 }
